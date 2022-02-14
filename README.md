@@ -2,13 +2,14 @@
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
-*FMIBuild.jl* holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) complient to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
+*FMIBuild.jl* holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 *FMIBuild.jl* provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
-[![](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)]() 
+[![CI Testing](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions)
+[![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
 
 ## How can I use FMIBuild.jl?
-1. open a Julia-Command-Window, activate your prefered environment
+1. open a Julia-Command-Window, activate your preferred environment
 1. goto package manager using ```]```
 1. type ```add https://github.com/JuliaLang/PackageCompiler.jl#kms/fix-windows-library-filename``` (there is currently an issue with the release v2.0.4 of PackageCompiler that will be fixed soon and make this step obsolete)
 1. type ```add FMIBuild```
