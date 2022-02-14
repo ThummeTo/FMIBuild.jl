@@ -2,7 +2,7 @@
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
-*FMIBuild.jl* holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) comlient to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
+*FMIBuild.jl* holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) complient to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 *FMIBuild.jl* provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
 [![](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)]() 
@@ -24,7 +24,7 @@ To keep dependencies nice and clean, the original package *FMI.jl* had been spli
 - [*FMIFlux.jl*](https://github.com/ThummeTo/FMIFlux.jl): Machine Learning with FMUs (differentiation over FMUs)
 
 ## What Platforms are supported?
-*FMIBuild.jl* is tested (and testing) under Julia Versions *1.6.5 LTS* and *latest* on Windows *latest*, Ubuntu *latest* and MacOS *latest*. `x64` and `x86` architectures are tested.
+*FMIBuild.jl* is tested (and testing) under Julia Versions *1.6.5 LTS* and *latest* on Windows *latest* and Ubuntu *latest*. `x64` architectures are tested. Mac and x86-architectures might work, but are not tested.
 
 ## How to cite?
 Tobias Thummerer, Lars Mikelsons and Josef Kircher. 2021. **NeuralFMU: towards structural integration of FMUs into neural networks.** Martin Sjölund, Lena Buffoni, Adrian Pop and Lennart Ochel (Ed.). Proceedings of 14th Modelica Conference 2021, Linköping, Sweden, September 20-24, 2021. Linköping University Electronic Press, Linköping (Linköping Electronic Conference Proceedings ; 181), 297-306. [DOI: 10.3384/ecp21181297](https://doi.org/10.3384/ecp21181297)
