@@ -1,0 +1,4 @@
+name = "FMU2"
+uuid = "fa6edecd-27ea-41f1-a3b4-bec5a029bc2e"
+authors = ["TT <tobias.thummerer@informatik.uni-augsburg.de>"]
+version = "2.0.3"

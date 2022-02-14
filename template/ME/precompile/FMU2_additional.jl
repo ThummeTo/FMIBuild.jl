@@ -1,0 +1,35 @@
+#
+# Copyright (c) 2021 Tobias Thummerer, Lars Mikelsons
+# Licensed under the MIT license. See LICENSE file in the project root for details.
+#
+
+precompile(Tuple{typeof(.init_FMU)})
+
+precompile(Tuple{typeof(.fmi2GetTypesPlatform)})
+precompile(Tuple{typeof(.fmi2GetVersion})
+precompile(Tuple{typeof(.fmi2Instantiate),                  fmi2String, fmi2Type, fmi2String, fmi2String, Ptr{fmi2CallbackFunctions}, fmi2Boolean, fmi2Boolean})
+precompile(Tuple{typeof(.fmi2FreeInstance),                 fmi2Component})
+precompile(Tuple{typeof(.fmi2SetDebugLogging),              fmi2Component, fmi2Boolean, Csize_t, Ptr{fmi2String}})
+precompile(Tuple{typeof(.fmi2SetupExperiment),              fmi2Component, fmi2Boolean, fmi2Real, fmi2Real, fmi2Boolean, fmi2Real})
+precompile(Tuple{typeof(.fmi2EnterInitializationMode),      fmi2Component})
+precompile(Tuple{typeof(.fmi2ExitInitializationMode),       fmi2Component})
+precompile(Tuple{typeof(.fmi2Terminate),                    fmi2Component})
+precompile(Tuple{typeof(.fmi2Reset),                        fmi2Component})
+precompile(Tuple{typeof(.fmi2GetReal),                      fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Real}})
+precompile(Tuple{typeof(.fmi2GetInteger),                   fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Integer}})
+precompile(Tuple{typeof(.fmi2GetBoolean),                   fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Boolean}})
+precompile(Tuple{typeof(.fmi2GetString),                    fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2String}})
+precompile(Tuple{typeof(.fmi2SetReal),                      fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Real}})
+precompile(Tuple{typeof(.fmi2SetInteger),                   fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Integer}})
+precompile(Tuple{typeof(.fmi2SetBoolean),                   fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2Boolean}})
+precompile(Tuple{typeof(.fmi2SetString),                    fmi2Component, Ptr{fmi2ValueReference}, Csize_t, Ptr{fmi2String}})
+precompile(Tuple{typeof(.fmi2SetTime),                      fmi2Component, fmi2Real})
+precompile(Tuple{typeof(.fmi2SetContinuousStates),          fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.fmi2EnterEventMode),               fmi2Component})
+precompile(Tuple{typeof(.fmi2NewDiscreteStates),            fmi2Component, Ptr{fmi2EventInfo}})
+precompile(Tuple{typeof(.fmi2EnterContinuousTimeMode),      fmi2Component})
+precompile(Tuple{typeof(.fmi2CompletedIntegratorStep),      fmi2Component, fmi2Boolean, Ptr{fmi2Boolean}, Ptr{fmi2Boolean}})
+precompile(Tuple{typeof(.fmi2GetDerivatives),               fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.fmi2GetEventIndicators),           fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.fmi2GetContinuousStates),          fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.fmi2GetNominalsOfContinuousStates),fmi2Component, Ptr{fmi2Real}, Csize_t})
