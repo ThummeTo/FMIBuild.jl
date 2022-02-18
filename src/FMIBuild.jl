@@ -159,6 +159,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Connot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
     merge_dir = joinpath(target_dir, "merged_" * fmu_name)
     cp(source_pkf_dir, merge_dir; force=true)
+    chmod(target_dir, 0o777; recursive=true)
     @info "[Build FMU] Source package is $(source_pkf_dir), deployed at $(merge_dir)"
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
@@ -182,10 +183,20 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         @info "[Build FMU] ... removed `FMIBUILD_NO_EXPORT_*` blocks."
     end
 
+    # projectToml = joinpath(merge_dir, "Project.toml")
+    # s = stat(projectToml)
+    # println(Int(s.mode))
+    # println(s.uid)
+    # println(s.gid)
+    # chmod(projectToml, 0o777)
+    # println(Int(s.mode))
+    # println(s.uid)
+    # println(s.gid)
+
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
     Pkg.activate(merge_dir)
-    Pkg.add("FMICore")
+    Pkg.add("FMICore") #Pkg.add(name="FMICore", version="0.6.1")
     @info "[Build FMU]    > Added FMICore"
     if removeLibDependency
         cdata = replace(cdata, r"(using|import) FMIBuild" => "")
