@@ -9,9 +9,9 @@
 [![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
 
 ## How can I use FMIBuild.jl?
+**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However you can install *FMIBuild.jl* by following these steps.
 1. open a Julia-Command-Window, activate your preferred environment
 1. goto package manager using ```]```
-1. type ```add https://github.com/JuliaLang/PackageCompiler.jl#kms/fix-windows-library-filename``` (there is currently an issue with the release v2.0.4 of PackageCompiler that will be fixed soon and make this step obsolete)
 1. type ```add FMIBuild```
 
 ## What FMI.jl-Library should I use?

@@ -8,15 +8,18 @@ module FMIBuild
 using FMICore: FMU2, FMU2Component, fmi2ModelDescription, fmi2ValueReference, fmi2Component, fmi2ComponentEnvironment, fmi2Status, fmi2EventInfo
 using FMICore: fmi2Type, fmi2TypeModelExchange, fmi2TypeCoSimulation
 using FMICore: fmi2True, fmi2False
-using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation
+using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
+using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString
 #using FMIExport: fmi2SaveModelDescription
 
 import PackageCompiler
 import Pkg
 import ZipFile
+using EzXML
+import Dates
 
 # exports
-export fmi2Save, fmi2SaveModelDescription
+export fmi2Save
 
 """
     fmi2Save(fmu::FMU2, 
@@ -182,7 +185,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
     Pkg.activate(merge_dir)
-    Pkg.develop(path="C:/Users/thummeto/documents/FMICore.jl")
+    Pkg.add("FMICore")
     @info "[Build FMU]    > Added FMICore"
     if removeLibDependency
         cdata = replace(cdata, r"(using|import) FMIBuild" => "")
