@@ -3,7 +3,7 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 #
 
-precompile(Tuple{typeof(.init_FMU)})
+precompile(Tuple{typeof(.init_FMU),                         Ptr{Cchar} })
 
 precompile(Tuple{typeof(.fmi2GetTypesPlatform)})
 precompile(Tuple{typeof(.fmi2GetVersion})

@@ -23,9 +23,13 @@ using FMICore: fmi2Status, fmi2Type
 global FMIBUILD_FMU = nothing
 global FMIBUILD_CONSTRUCTOR = nothing
 
-Base.@ccallable function init_FMU()::Cvoid
+Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
+    dllLoc = unsafe_string(_dllLoc)
+    comps = splitpath(dllLoc)
+    dllLoc = joinpath(comps[1:end-3]..., "resources")
+
     global FMIBUILD_FMU, FMIBUILD_CONSTRUCTOR
-    FMIBUILD_FMU = FMIBUILD_CONSTRUCTOR()
+    FMIBUILD_FMU = FMIBUILD_CONSTRUCTOR(dllLoc)
     nothing
 end
 

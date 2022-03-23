@@ -91,7 +91,26 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     {
     case DLL_PROCESS_ATTACH:
         init_julia(0, NULL);
-        init_FMU();
+
+        // get DLL path for resource location
+        char path[MAX_PATH];
+        HMODULE hm = NULL;
+
+        if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &init_julia, &hm) == 0)
+        {
+            int ret = GetLastError();
+            fprintf(stderr, "GetModuleHandle failed, error = %d\n", ret);
+            return (FALSE);
+        }
+        if (GetModuleFileName(hm, path, sizeof(path)) == 0)
+        {
+            int ret = GetLastError();
+            fprintf(stderr, "GetModuleFileName failed, error = %d\n", ret);
+            return (FALSE);
+        }
+
+        char* ptr = (char*)&path;
+        init_FMU(ptr);
         break;
     case DLL_PROCESS_DETACH:
         shutdown_julia(0);
