@@ -104,8 +104,8 @@ fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component, fmi2Real[], size_t);
 #include <WinDef.h>
 #include <stdbool.h>
 #define BOOL bool
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved);
-void init_FMU(void);
+BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID);
+void init_FMU(char*);
 
 // from julia_init.h
 //void init_julia(int argc, char *argv[]);

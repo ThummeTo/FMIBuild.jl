@@ -59,6 +59,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     coSimulation=false,
     removeLibDependency=true,
     removeNoExportBlocks=true,
+    resources::Union{Dict{String, String}, Nothing}=nothing,
     pkg_comp_kwargs...)
 
     # @assert fmi2Check(fmu) == true ["fmiBuild(...): FMU-Pre-Check failed. See messages above for further information."]
@@ -195,8 +196,17 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
 
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
+    preCompState = 1
+    try 
+        preCompState = ENV["JULIA_PKG_PRECOMPILE_AUTO"]
+    catch e 
+        preCompState = 1
+    end
+    ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
+
     Pkg.activate(merge_dir)
-    Pkg.add("FMICore") #Pkg.add(name="FMICore", version="0.6.1")
+    Pkg.add("FMICore") 
+    #Pkg.add(name="FMICore", version="0.7.1")
     @info "[Build FMU]    > Added FMICore"
     if removeLibDependency
         cdata = replace(cdata, r"(using|import) FMIBuild" => "")
@@ -207,11 +217,12 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
             @info "[Build FMU]    > Not used FMIBuild"
         end
     end
-    Pkg.activate(currentEnv)
-    Pkg.resolve()
-    @info "[Build FMU] ... adding/removing dependencies done."
-    close(f)
 
+    Pkg.activate(currentEnv)
+    #Pkg.resolve()
+    ENV["JULIA_PKG_PRECOMPILE_AUTO"]=preCompState
+    @info "[Build FMU] ... adding/removing dependencies done."
+    
     @info "[Build FMU] ... generating new FMU source file at $(joinpath(merge_dir, fmu_src_in_merge_dir))"
     
     f = open(joinpath(merge_dir, fmu_src_in_merge_dir), "w")
@@ -240,6 +251,16 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force=true)
     cp(joinpath(target_dir, "_" * fmu_name, "share"), joinpath(bin_dir, "..", "share"); force=true)
     cp(joinpath(target_dir, "_" * fmu_name, "include"), joinpath(bin_dir, "..", "include"); force=true)
+
+    if resources != nothing 
+        @info "[Build FMU] Adding resource files ..."
+        mkdir(joinpath(bin_dir, "..", "..", "resources"))
+        for (key, val) in resources
+            cp(key, joinpath(bin_dir, "..", "..", "resources", val); force=true)
+            @info "[Build FMU] \t $val"
+        end
+        @info "[Build FMU] ... adding resoruce files done."
+    end
 
     @info "[Build FMU] Patching libjulia.$(libext) @ `$(bin_dir)`..."
     patchJuliaLib(joinpath(bin_dir, "libjulia.$(libext)"))
@@ -405,7 +426,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             link!(sv_node, AttributeNode("causality", fmi2CausalityToString(sv.causality)))
         end
         if sv.variability != nothing
-            link!(sv_node, AttributeNode("causality", fmi2VariabilityToString(sv.variability)))
+            link!(sv_node, AttributeNode("variability", fmi2VariabilityToString(sv.variability)))
         end
         if sv.initial != nothing
             link!(sv_node, AttributeNode("initial", fmi2InitialToString(sv.initial)))
@@ -430,7 +451,57 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             link!(sv_node, r_node)
         end
 
-        # ToDo: Implement remaining DataTypes: Integer, Boolean, String, Enumeration
+        # Integer
+        if sv._Integer != nothing
+            i_node = ElementNode("Integer")
+
+            if sv._Integer.start != nothing 
+                link!(i_node, AttributeNode("start", "$sv._Integer.start)"))
+            end
+
+            # ToDo: Implement remaining attributes 
+
+            link!(sv_node, i_node)
+        end
+
+        # Boolean
+        if sv._Boolean != nothing
+            b_node = ElementNode("Boolean")
+
+            if sv._Boolean.start != nothing 
+                link!(b_node, AttributeNode("start", "$sv._Boolean.start)"))
+            end
+
+            # ToDo: Implement remaining attributes 
+
+            link!(sv_node, b_node)
+        end
+
+        # String
+        if sv._String != nothing
+            s_node = ElementNode("String")
+
+            if sv._String.start != nothing 
+                link!(s_node, AttributeNode("start", "$sv._String.start)"))
+            end
+
+            # ToDo: Implement remaining attributes 
+
+            link!(sv_node, s_node)
+        end
+
+        # _Enumeration
+        if sv._Enumeration != nothing
+            e_node = ElementNode("Enumeration")
+
+            # if sv._Enumeration.start != nothing 
+            #     link!(e_node, AttributeNode("start", "$sv._Enumeration.start)"))
+            # end
+
+            # ToDo: Implement remaining attributes 
+
+            link!(sv_node, e_node)
+        end
     end
 
     ms = ElementNode("ModelStructure")
