@@ -204,10 +204,25 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     end
     ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
 
+    # check package dependencies 
+    # Pkg.activate(source_pkf_dir)
+    # buf = IOBuffer()
+    # Pkg.status(;io=buf)
+    # installedPkgs = split(String(take!(buf)), "\n")
+    # installedPkgs = installedPkgs[3:end] # skip header 
+
+    # adding Pkgs
     Pkg.activate(merge_dir)
+    # for pkg in installedPkgs
+    #     pkgname = pkg[14:end]
+    #     Pkg.add(pkgname)
+    #     @info "[Build FMU]    > Added `$(pkgname)`"
+    # end
     Pkg.add("FMICore") 
+    @info "[Build FMU]    > Added `FMICore`"
+    #@info "[Build FMU]    > Added LLVMExtra_jll"
+    #Pkg.add("LLVMExtra_jll")
     #Pkg.add(name="FMICore", version="0.7.1")
-    @info "[Build FMU]    > Added FMICore"
     if removeLibDependency
         cdata = replace(cdata, r"(using|import) FMIBuild" => "")
         try
@@ -245,6 +260,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
                                     julia_init_c_file = "$(@__DIR__)/../template/ME/header/FMU2_init.c",
                                     header_files = ["$(@__DIR__)/../template/ME/header/FMU2_init.h"], 
                                     force=true,
+                                    include_transitive_dependencies=true,
+                                    include_lazy_artifacts=true,                                    
                                     pkg_comp_kwargs...)
     @info "[Build FMU] ... compiling FMU done."
 
