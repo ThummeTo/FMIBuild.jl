@@ -1,22 +1,33 @@
-![FMI.jl Logo](https://github.com/ThummeTo/FMI.jl/blob/main/logo/dark/fmijl_logo_640_320.png "FMI.jl Logo")
+![FMI.jl Logo](https://github.com/ThummeTo/FMI.jl/blob/main/logo/dark/fmijl_logo_640_320.png?raw=true "FMI.jl Logo")
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
-[![CI Testing](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions)
+[![Run Tests](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml)
 [![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
 
 ## How can I use FMIBuild.jl?
-**Please note:** [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However you can install *FMIBuild.jl* by following these steps.
-1. open a Julia-Command-Window, activate your preferred environment
-1. goto package manager using ```]```
-1. type ```add FMIBuild```
+
+**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However you can install *FMIBuild.jl* by following these steps.
+
+1\. Open a Julia-REPL, switch to package mode using `]`, activate your preferred environment.
+
+2\. Install [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
+```julia-repl
+(@v1.6) pkg> add FMIBuild
+```
+
+(3)\. If you want to check that everything works correctly, you can run the tests bundled with [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
+```julia-repl
+(@v1.6) pkg> test FMIBuild
+```
 
 ## What FMI.jl-Library should I use?
-![FMI.jl Family](https://github.com/ThummeTo/FMI.jl/blob/main/docs/src/assets/FMI_JL_family.png "FMI.jl Family")
-To keep dependencies nice and clean, the original package [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) had been split into new packages:
+![FMI.jl Family](https://github.com/ThummeTo/FMI.jl/blob/main/docs/src/assets/FMI_JL_family.png?raw=true  "FMI.jl Family")
+To keep dependencies nice and clean, the original package *FMI.jl* had been split into new packages:
+
 - [*FMI.jl*](https://github.com/ThummeTo/FMI.jl): High level loading, manipulating, saving or building entire FMUs from scratch
 - [*FMIImport.jl*](https://github.com/ThummeTo/FMIImport.jl): Importing FMUs into Julia
 - [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl): Exporting stand-alone FMUs from Julia Code
