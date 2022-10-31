@@ -157,7 +157,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         source_pkf_dir = (length(pathcomp) > 1 ? joinpath(pathcomp[1:end-1]...) : "")
         fmu_src_in_merge_dir = joinpath(pathcomp[end], fmu_src_in_merge_dir)
     end
-    @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Connot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
+    @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Cannot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
     merge_dir = joinpath(target_dir, "merged_" * fmu_name)
     cp(source_pkf_dir, merge_dir; force=true)
     chmod(target_dir, 0o777; recursive=true)
