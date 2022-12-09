@@ -157,7 +157,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         source_pkf_dir = (length(pathcomp) > 1 ? joinpath(pathcomp[1:end-1]...) : "")
         fmu_src_in_merge_dir = joinpath(pathcomp[end], fmu_src_in_merge_dir)
     end
-    @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Connot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
+    @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Cannot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
     merge_dir = joinpath(target_dir, "merged_" * fmu_name)
     cp(source_pkf_dir, merge_dir; force=true)
     chmod(target_dir, 0o777; recursive=true)
@@ -337,7 +337,7 @@ function subtractPath(pathA::String, pathB::String)
 end
 
 # Thank you @staticfloat
-# src: https://github.com/JuliaLang/PackageCompiler.jl/issues/658
+# based on: https://github.com/JuliaLang/PackageCompiler.jl/issues/658
 # patches the compiled DLL, so the lib does not have "bad" relative paths like "../bin/", where "bin" is the directory of the DLL itself
 function patchJuliaLib(libjulia_path)
     
@@ -359,6 +359,10 @@ function patchJuliaLib(libjulia_path)
         libpath = map(libpath) do l
             if startswith(l, "../bin/")
                 return l[8:end]
+            elseif startswith(l, "@../bin/")
+                return "@$(l[9:end])"
+            else
+                return l
             end
         end
     
@@ -384,7 +388,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
     link!(doc_root, AttributeNode("guid", "$(md.guid)"))
 
     # optional
-    link!(doc_root, AttributeNode("generationTool", "FMIExport.jl (0.1.0) / FMIBuild.jl (0.1.0) by Tobias Thummerer, Lars Mikelsons"))
+    link!(doc_root, AttributeNode("generationTool", "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons"))
     if md.generationDateAndTime != nothing
         dateTimeString = ""
         if typeof(md.generationDateAndTime) == Dates.DateTime
@@ -457,7 +461,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             r_node = ElementNode("Real")
 
             if sv._Real.start != nothing 
-                link!(r_node, AttributeNode("start", "$sv._Real.start)"))
+                link!(r_node, AttributeNode("start", "$(sv._Real.start)"))
             end
             if sv._Real.derivative != nothing 
                 link!(r_node, AttributeNode("derivative", "$(sv._Real.derivative)"))
