@@ -457,14 +457,14 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         end
 
         # Real
-        if sv._Real != nothing
+        if sv.Real != nothing
             r_node = ElementNode("Real")
 
-            if sv._Real.start != nothing 
-                link!(r_node, AttributeNode("start", "$(sv._Real.start)"))
+            if sv.Real.start != nothing 
+                link!(r_node, AttributeNode("start", "$(sv.Real.start)"))
             end
-            if sv._Real.derivative != nothing 
-                link!(r_node, AttributeNode("derivative", "$(sv._Real.derivative)"))
+            if sv.Real.derivative != nothing 
+                link!(r_node, AttributeNode("derivative", "$(sv.Real.derivative)"))
             end
 
             # ToDo: Implement remaining attributes 
@@ -473,11 +473,11 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         end
 
         # Integer
-        if sv._Integer != nothing
+        if sv.Integer != nothing
             i_node = ElementNode("Integer")
 
-            if sv._Integer.start != nothing 
-                link!(i_node, AttributeNode("start", "$sv._Integer.start)"))
+            if sv.Integer.start != nothing 
+                link!(i_node, AttributeNode("start", "$sv.Integer.start)"))
             end
 
             # ToDo: Implement remaining attributes 
@@ -486,11 +486,11 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         end
 
         # Boolean
-        if sv._Boolean != nothing
+        if sv.Boolean != nothing
             b_node = ElementNode("Boolean")
 
-            if sv._Boolean.start != nothing 
-                link!(b_node, AttributeNode("start", "$sv._Boolean.start)"))
+            if sv.Boolean.start != nothing 
+                link!(b_node, AttributeNode("start", "$sv.Boolean.start)"))
             end
 
             # ToDo: Implement remaining attributes 
@@ -499,11 +499,11 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         end
 
         # String
-        if sv._String != nothing
+        if sv.String != nothing
             s_node = ElementNode("String")
 
-            if sv._String.start != nothing 
-                link!(s_node, AttributeNode("start", "$sv._String.start)"))
+            if sv.String.start != nothing 
+                link!(s_node, AttributeNode("start", "$sv.String.start)"))
             end
 
             # ToDo: Implement remaining attributes 
@@ -512,11 +512,11 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         end
 
         # _Enumeration
-        if sv._Enumeration != nothing
+        if sv.Enumeration != nothing
             e_node = ElementNode("Enumeration")
 
-            # if sv._Enumeration.start != nothing 
-            #     link!(e_node, AttributeNode("start", "$sv._Enumeration.start)"))
+            # if sv.Enumeration.start != nothing 
+            #     link!(e_node, AttributeNode("start", "$sv.Enumeration.start)"))
             # end
 
             # ToDo: Implement remaining attributes 
