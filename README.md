@@ -6,6 +6,7 @@
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
 [![Run Tests](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml)
+[![Run PkgEval](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml)
 [![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
 
 ## How can I use FMIBuild.jl?
