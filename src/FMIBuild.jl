@@ -49,6 +49,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `removeLibDependency` removes the FMIBuild.jl-dependency, so it will not be part of the resulting FMU (default=`true`) 
     - `removeNoExportBlocks` removes the blocks marked with `### FMIBUILD_NO_EXPORT_BEGIN ###` and `### FMIBUILD_NO_EXPORT_END ###` from the `fmu_src_file`, so it will not be part of the resulting FMU (default=`true`) 
     - `ressources` a Dictionary of ressources (srcPath::String => dstPath::String) for files to ship as part of the FMU
+    - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
     - `surpressWarnings::Bool` an indicator wheater warnings should be surpressed (default=false)
 """
 function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
@@ -59,6 +60,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     removeNoExportBlocks=true,
     resources::Union{Dict{String, String}, Nothing}=nothing,
     surpressWarnings::Bool=false,
+    debug::Bool=false,
     pkg_comp_kwargs...)
 
     startCompilation = time()
@@ -170,6 +172,9 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
     fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content.jl"
+    if debug
+        fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content_debug.jl"
+    end
 
     @info "[Build FMU] ... reading FMU template file at $(fmu_res)"
     f = open(fmu_res, "r")
