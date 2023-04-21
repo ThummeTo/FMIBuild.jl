@@ -9,7 +9,9 @@ using FMICore: FMU2, FMU2Component, fmi2ModelDescription, fmi2ValueReference, fm
 using FMICore: fmi2Type, fmi2TypeModelExchange, fmi2TypeCoSimulation
 using FMICore: fmi2True, fmi2False
 using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
-using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString
+using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
+using FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
+using FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
 #using FMIExport: fmi2SaveModelDescription
 
 import PackageCompiler
@@ -28,8 +30,6 @@ export fmi2Save
      standalone=true, 
      compress=false, 
      cleanup=true, 
-     modelExchange=true,
-     coSimulation=false,
      removeLibDependency=true,
      removeNoExportBlocks=true,
      pkg_comp_kwargs...)
@@ -46,23 +46,49 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `standalone` if the FMU should be build in standalone-mode, meaning without external dependencies to a Julia-Installation (default=`true`) 
     - `compress` if the FMU archive should be compressed to save disk space. On the other hand, this may enlarge loading time (default=`false`) 
     - `cleanup` if the unzipped FMU archive should be deleted after creation (default=`true`) 
-    - `modelExchange` if the FMU should support ME (model exchange) (default=`true`) 
-    - `coSimulation` *currently not supported* if the FMU should support CS (co simulation) (default=`false`) 
     - `removeLibDependency` removes the FMIBuild.jl-dependency, so it will not be part of the resulting FMU (default=`true`) 
     - `removeNoExportBlocks` removes the blocks marked with `### FMIBUILD_NO_EXPORT_BEGIN ###` and `### FMIBUILD_NO_EXPORT_END ###` from the `fmu_src_file`, so it will not be part of the resulting FMU (default=`true`) 
+    - `ressources` a Dictionary of ressources (srcPath::String => dstPath::String) for files to ship as part of the FMU
+    - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
+    - `surpressWarnings::Bool` an indicator wheater warnings should be surpressed (default=false)
 """
 function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
     standalone=true, 
     compress=false, 
     cleanup=true, 
-    modelExchange=true,
-    coSimulation=false,
     removeLibDependency=true,
     removeNoExportBlocks=true,
     resources::Union{Dict{String, String}, Nothing}=nothing,
+    surpressWarnings::Bool=false,
+    debug::Bool=false,
     pkg_comp_kwargs...)
 
+    startCompilation = time()
+
     # @assert fmi2Check(fmu) == true ["fmiBuild(...): FMU-Pre-Check failed. See messages above for further information."]
+
+    fmu_fname, fmu_ext = splitext(basename(fmu_path))
+    @assert fmu_ext == ".fmu" "FMU must have file extension `.fmu`, has `$(fmu_ext)`."
+
+    # warnings
+
+    if !surpressWarnings
+        if fmu.modelDescription.modelName != fmu_fname
+            @warn "This FMU has a model name `$(fmu.modelDescription.modelName)` that does not fit the FMU filename `$(fmu_fname).fmu`. Is this intended?"
+        end
+
+        if !isnothing(fmu.modelDescription.modelExchange)
+            if fmu.modelDescription.modelExchange.modelIdentifier != fmu_fname
+                @warn "This FMU has a model exchange identifier `$(fmu.modelDescription.modelExchange.modelIdentifier)` that does not fit the FMU filename `$(fmu_fname).fmu`. Is this intended?"
+            end
+        end
+
+        if !isnothing(fmu.modelDescription.coSimulation)
+            if fmu.modelDescription.coSimulation.modelIdentifier != fmu_fname
+                @warn "This FMU has a co simulation identifier `$(fmu.modelDescription.coSimulation.modelIdentifier)` that does not fit the FMU filename `$(fmu_fname).fmu`. Is this intended?"
+            end
+        end
+    end
 
     # searching the source file ...
     if fmu_src_file == nothing
@@ -81,25 +107,6 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
 
     pkg_dir = "$(@__DIR__)/../template"
     (fmu_name, fmu_ext) = splitext(basename(fmu_path))
-
-    if modelExchange && coSimulation
-        #pkg_dir = joinpath(pkg_dir, "ME_CS")
-        @assert false ["fmiBuild(...): `modelExchange` and `coSimulation` is under development."]
-    elseif modelExchange
-        pkg_dir = joinpath(pkg_dir, "ME")
-
-        if fmu.modelDescription.modelExchange == nothing
-            fmu.modelDescription.modelExchange = fmi2ModelDescriptionModelExchange()
-        end 
-        fmu.modelDescription.modelExchange.modelIdentifier = fmu_name
-
-    elseif coSimulation
-        #pkg_dir = joinpath(pkg_dir, "CS")
-        @assert false ["fmiBuild(...): `coSimulation` only is under development."]
-    else
-        @assert false ["fmiBuild(...): At least one of `modelExchange` or `coSimulation` must be supported."]
-    end 
-
     pkg_dir = joinpath(pkg_dir, "FMU2")
 
     @assert fmu_ext != "fmu" ["fmiBuild(...): `fmu_path` must end with `.fmu`."]
@@ -165,6 +172,9 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
     fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content.jl"
+    if debug
+        fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content_debug.jl"
+    end
 
     @info "[Build FMU] ... reading FMU template file at $(fmu_res)"
     f = open(fmu_res, "r")
@@ -219,6 +229,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     #     @info "[Build FMU]    > Added `$(pkgname)`"
     # end
     Pkg.add("FMICore") 
+    core_version = Pkg.dependencies()[Base.UUID("8af89139-c281-408e-bce2-3005eb87462f")].version
+    @assert core_version >= v"0.17.0" "Installed FMICore < v0.17.0, this is not supported. Please file an issue on GitHub."
     @info "[Build FMU]    > Added `FMICore`"
     #@info "[Build FMU]    > Added LLVMExtra_jll"
     #Pkg.add("LLVMExtra_jll")
@@ -229,7 +241,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
             Pkg.rm("FMIBuild")
             @info "[Build FMU]    > Removed FMIBuild"
         catch e
-            @info "[Build FMU]    > Not used FMIBuild"
+            @info "[Build FMU]    > Not used FMIBuild (nothing removed)"
         end
     end
 
@@ -282,7 +294,10 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     @info "[Build FMU] Patching libjulia.$(libext) @ `$(bin_dir)`..."
     patchJuliaLib(joinpath(bin_dir, "libjulia.$(libext)"))
     @info "[Build FMU] ... patching libjulia.$(libext) done."
-    
+
+    stopCompilation = time()
+    startPacking = time()
+
     @info "[Build FMU] Building model description ..."
     #buildModelDescription(md_path, fmu_name, fmu_src_file)
     fmi2SaveModelDescription(fmu.modelDescription, md_path)
@@ -315,6 +330,21 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         # Clean-up is done by saving in a temporary directory (which may be deleted by the OS) 
         @info "[Build FMU] ... clean up done."
     end 
+
+    stopPacking = time()
+
+    # output message 
+
+    dt = stopPacking-startCompilation
+    per = (stopPacking-startPacking) / dt * 100.0
+    mins = 0
+    secs = round(Integer, dt)
+    while secs >= 60
+        mins += 1
+        secs -= 60
+    end
+
+    @info "FMU-Export succeeded after $(mins)m $(secs)s ($(round(per; digits=1))% packing time)"
 
     return true
 end
@@ -375,6 +405,94 @@ function patchJuliaLib(libjulia_path)
     end
 end
 
+function dependencyString(dependencies::AbstractArray)
+    if isnothing(dependencies)
+        return ""
+    end
+
+    if length(dependencies) <= 0
+        return "" 
+    end
+
+    depStr = "$(dependencies[1])"
+    for d in 2:length(dependencies)
+        depStr *= " $(dependencies[d])"
+    end
+
+    return depStr
+end
+
+function dependencyKindString(dependencies::AbstractArray)
+    if isnothing(dependencies)
+        return ""
+    end
+
+    if length(dependencies) <= 0
+        return "" 
+    end
+
+    depStr = "$(fmi2DependencyKindToString(dependencies[1]))"
+    for d in 2:length(dependencies)
+        depStr *= " $(fmi2DependencyKindToString(dependencies[d]))"
+    end
+
+    return depStr
+end
+
+function addFieldsAsAttributes(node, _struct, skiplist=())
+    for field in fieldnames(typeof(_struct))
+        if field ∉ skiplist
+
+            if !isdefined(_struct, field)
+                continue
+            end
+
+            value = getfield(_struct, field)
+
+            if isnothing(value)
+               continue
+            end
+
+            # special formatters
+            if isa(value, Bool)
+
+                value = (value ? "true" : "false")
+            elseif field == :causality
+
+                value = fmi2CausalityToString(value)
+            elseif field == :variability
+
+                value = fmi2VariabilityToString(value)
+            elseif field == :initial
+
+                value = fmi2InitialToString(value)
+            elseif field == :dependencies
+
+                if length(value) <= 0
+                    return "" 
+                end
+                depStr = "$(value[1])"
+                for d in 2:length(value)
+                    depStr *= " $(value[d])"
+                end
+                value = depStr
+            elseif field == :dependenciesKind
+
+                if length(value) <= 0
+                    return "" 
+                end
+                depStr = "$(fmi2DependencyKindToString(value[1]))"
+                for d in 2:length(value)
+                    depStr *= " $(fmi2DependencyKindToString(value[d]))"
+                end
+                value = depStr
+            end
+
+            link!(node, AttributeNode("$(field)", "$(value)"))
+        end
+    end
+end
+
 function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
     doc = XMLDocument()
     
@@ -391,38 +509,74 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
     link!(doc_root, AttributeNode("generationTool", "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons"))
     if md.generationDateAndTime != nothing
         dateTimeString = ""
-        if typeof(md.generationDateAndTime) == Dates.DateTime
+        if isa(md.generationDateAndTime, Dates.DateTime)
             dateTimeString = Dates.format(md.generationDateAndTime, "yyyy-mm-dd") * "T" * Dates.format(md.generationDateAndTime, "HH:MM:SS") * "Z" 
-        elseif typeof(md.generationDateAndTime) == String
+        elseif isa(md.generationDateAndTime, String)
             dateTimeString = md.generationDateAndTime
         else 
             @warn "fmi2SaveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(md.generationDateAndTime)` (typeof `$(typeof(md.generationDateAndTime))`)."
         end
         link!(doc_root, AttributeNode("generationDateAndTime", dateTimeString))
     end
-    if md.variableNamingConvention != nothing
+    if !isnothing(md.variableNamingConvention)
         link!(doc_root, AttributeNode("variableNamingConvention", (md.variableNamingConvention == fmi2VariableNamingConventionStructured ? "structured" : "flat")))
     end
-    if md.numberOfEventIndicators != nothing
+    if !isnothing(md.numberOfEventIndicators)
         link!(doc_root, AttributeNode("numberOfEventIndicators", "$(md.numberOfEventIndicators)"))
     end
 
-    if md.modelExchange != nothing
+    if !isnothing(md.modelExchange)
         me = ElementNode("ModelExchange")
         link!(doc_root, me)
+        addFieldsAsAttributes(me, md.modelExchange)
+    end
 
-        # mandatory
-        link!(me, AttributeNode("modelIdentifier", md.modelExchange.modelIdentifier))
+    if !isnothing(md.coSimulation)
+        cs = ElementNode("CoSimulation")
+        link!(doc_root, cs)
+        addFieldsAsAttributes(cs, md.coSimulation)
+    end
 
-        # optional
-        if md.modelExchange.canGetAndSetFMUstate != nothing
-            link!(me, AttributeNode("canGetAndSetFMUstate", (md.modelExchange.canGetAndSetFMUstate ? "true" : "false"))) 
-        end
-        if md.modelExchange.canSerializeFMUstate != nothing
-            link!(me, AttributeNode("canSerializeFMUstate", (md.modelExchange.canSerializeFMUstate ? "true" : "false"))) 
-        end
-        if md.modelExchange.providesDirectionalDerivative != nothing
-            link!(me, AttributeNode("providesDirectionalDerivative", (md.modelExchange.providesDirectionalDerivative ? "true" : "false"))) 
+    if !isnothing(md.typeDefinitions)
+        td = ElementNode("TypeDefinitions")
+        link!(doc_root, td)
+
+        for typdef in md.typeDefinitions
+            st = ElementNode("SimpleType")
+            link!(td, st)
+
+            addFieldsAsAttributes(st, typdef, (:attribute,))
+
+            if isa(typdef.attribute, fmi2RealAttributes)
+                tn = ElementNode("Real")
+                addFieldsAsAttributes(tn, typdef.attribute)
+                link!(st, tn)
+            elseif isa(typdef.attribute, fmi2IntegerAttributes)
+                tn = ElementNode("Integer")
+                addFieldsAsAttributes(tn, typdef.attribute)
+                link!(st, tn)
+            elseif isa(typdef.attribute, fmi2BooleanAttributes)
+                tn = ElementNode("Boolean")
+                addFieldsAsAttributes(tn, typdef.attribute)
+                link!(st, tn)
+            elseif isa(typdef.attribute, fmi2StringAttributes)
+                tn = ElementNode("String")
+                addFieldsAsAttributes(tn, typdef.attribute)
+                link!(st, tn)
+            elseif isa(typdef.attribute, fmi2EnumerationAttributes)
+                tn = ElementNode("Enumeration")
+                addFieldsAsAttributes(tn, typdef.attribute, (:items,))
+                link!(st, tn)
+
+                for j in 1:length(typdef.attribute)
+                    itemNode = ElementNode("Item")
+                    addFieldsAsAttributes(itemNode, typdef.attribute[j])
+                    link!(tn, itemNode)
+                end
+            else
+                @warn "Unknown type for fmi2SimpleType."
+            end
+
         end
     end
 
@@ -435,92 +589,42 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         sv_node = ElementNode("ScalarVariable")
         link!(mv, sv_node)
 
-        # mandatory
-        link!(sv_node, AttributeNode("name", sv.name))
-        link!(sv_node, AttributeNode("valueReference", "$(sv.valueReference)"))
-
-        # optional
-        if sv.description != nothing
-            link!(sv_node, AttributeNode("description", sv.description))
-        end
-        if sv.causality != nothing
-            link!(sv_node, AttributeNode("causality", fmi2CausalityToString(sv.causality)))
-        end
-        if sv.variability != nothing
-            link!(sv_node, AttributeNode("variability", fmi2VariabilityToString(sv.variability)))
-        end
-        if sv.initial != nothing
-            link!(sv_node, AttributeNode("initial", fmi2InitialToString(sv.initial)))
-        end
-        if sv.canHandleMultipleSetPerTimeInstant != nothing
-            link!(sv_node, AttributeNode("canHandleMultipleSetPerTimeInstant", (sv.canHandleMultipleSetPerTimeInstant ? "true" : "false")))
-        end
+        addFieldsAsAttributes(sv_node, sv, (:attribute,))
 
         # Real
         if sv.Real != nothing
             r_node = ElementNode("Real")
-
-            if sv.Real.start != nothing 
-                link!(r_node, AttributeNode("start", "$(sv.Real.start)"))
-            end
-            if sv.Real.derivative != nothing 
-                link!(r_node, AttributeNode("derivative", "$(sv.Real.derivative)"))
-            end
-
-            # ToDo: Implement remaining attributes 
-
+            addFieldsAsAttributes(r_node, sv.Real, (:attributes,))
+            addFieldsAsAttributes(r_node, sv.attribute.attributes)
             link!(sv_node, r_node)
         end
 
         # Integer
         if sv.Integer != nothing
             i_node = ElementNode("Integer")
-
-            if sv.Integer.start != nothing 
-                link!(i_node, AttributeNode("start", "$sv.Integer.start)"))
-            end
-
-            # ToDo: Implement remaining attributes 
-
+            addFieldsAsAttributes(i_node, sv.Integer, (:attributes,))
+            addFieldsAsAttributes(i_node, sv.attribute.attributes)
             link!(sv_node, i_node)
         end
 
         # Boolean
         if sv.Boolean != nothing
             b_node = ElementNode("Boolean")
-
-            if sv.Boolean.start != nothing 
-                link!(b_node, AttributeNode("start", "$sv.Boolean.start)"))
-            end
-
-            # ToDo: Implement remaining attributes 
-
+            addFieldsAsAttributes(b_node, sv.Boolean)
             link!(sv_node, b_node)
         end
 
         # String
         if sv.String != nothing
             s_node = ElementNode("String")
-
-            if sv.String.start != nothing 
-                link!(s_node, AttributeNode("start", "$sv.String.start)"))
-            end
-
-            # ToDo: Implement remaining attributes 
-
+            addFieldsAsAttributes(s_node, sv.String)
             link!(sv_node, s_node)
         end
 
-        # _Enumeration
+        # Enumeration
         if sv.Enumeration != nothing
             e_node = ElementNode("Enumeration")
-
-            # if sv.Enumeration.start != nothing 
-            #     link!(e_node, AttributeNode("start", "$sv.Enumeration.start)"))
-            # end
-
-            # ToDo: Implement remaining attributes 
-
+            addFieldsAsAttributes(e_node, sv.Enumeration)
             link!(sv_node, e_node)
         end
     end
@@ -536,16 +640,8 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.outputs[i]
 
             uk_node = ElementNode("Unknown")
+            addFieldsAsAttributes(uk_node, uk)
             link!(outs, uk_node)
-            link!(uk_node, AttributeNode("index", "$(uk.index)"))
-            if uk.dependencies != nothing
-                link!(uk_node, AttributeNode("dependencies", ""))
-                # ToDo: Actually save them!
-            end
-            if uk.dependenciesKind != nothing
-                link!(uk_node, AttributeNode("dependenciesKind", ""))
-                # ToDo: Actually save them!
-            end
         end
     end
 
@@ -557,16 +653,8 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.derivatives[i]
 
             uk_node = ElementNode("Unknown")
+            addFieldsAsAttributes(uk_node, uk)
             link!(ders, uk_node)
-            link!(uk_node, AttributeNode("index", "$(uk.index)"))
-            if uk.dependencies != nothing
-                link!(uk_node, AttributeNode("dependencies", ""))
-                # ToDo: Actually save them!
-            end
-            if uk.dependenciesKind != nothing
-                link!(uk_node, AttributeNode("dependenciesKind", ""))
-                # ToDo: Actually save them!
-            end
         end
     end
 
@@ -578,16 +666,8 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.initialUnknowns[i]
 
             uk_node = ElementNode("Unknown")
+            addFieldsAsAttributes(uk_node, uk)
             link!(inis, uk_node)
-            link!(uk_node, AttributeNode("index", "$(uk.index)"))
-            if uk.dependencies != nothing
-                link!(uk_node, AttributeNode("dependencies", ""))
-                # ToDo: Actually save them!
-            end
-            if uk.dependenciesKind != nothing
-                link!(uk_node, AttributeNode("dependenciesKind", ""))
-                # ToDo: Actually save them!
-            end
         end
     end
     

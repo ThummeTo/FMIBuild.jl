@@ -5,31 +5,34 @@
 
 import FMICore
 
-# import FMICore: fmi2Instantiate, fmi2FreeInstance!, fmi2GetTypesPlatform, fmi2GetVersion
-# import FMICore: fmi2SetDebugLogging, fmi2SetupExperiment, fmi2EnterInitializationMode, fmi2ExitInitializationMode, fmi2Terminate, fmi2Reset
-# import FMICore: fmi2GetReal!, fmi2SetReal, fmi2GetInteger!, fmi2SetInteger, fmi2GetBoolean!, fmi2SetBoolean, fmi2GetString!, fmi2SetString
-# import FMICore: fmi2GetFMUstate!, fmi2SetFMUstate, fmi2FreeFMUstate!, fmi2SerializedFMUstateSize!, fmi2SerializeFMUstate!, fmi2DeSerializeFMUstate!
-# import FMICore: fmi2GetDirectionalDerivative!, fmi2SetRealInputDerivatives, fmi2GetRealOutputDerivatives
-# import FMICore: fmi2DoStep, fmi2CancelStep, fmi2GetStatus!, fmi2GetRealStatus!, fmi2GetIntegerStatus!, fmi2GetBooleanStatus!, fmi2GetStringStatus!
-# import FMICore: fmi2SetTime, fmi2SetContinuousStates, fmi2EnterEventMode, fmi2NewDiscreteStates, fmi2EnterContinuousTimeMode, fmi2CompletedIntegratorStep!
-# import FMICore: fmi2GetDerivatives, fmi2GetEventIndicators, fmi2GetContinuousStates, fmi2GetNominalsOfContinuousStates
-
-using FMICore: fmi2CallbackFunctions, fmi2Component, fmi2EventInfo, fmi2ValueReference
-using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String
-using FMICore: fmi2Status, fmi2Type
+using FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
+using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusError, fmi2StatusFatal
+using FMICore: fmi2Status, fmi2Type, fmi2StatusToString
+using FMICore: FMU2Component
 
 ##############
 
 global FMIBUILD_FMU = nothing
 global FMIBUILD_CONSTRUCTOR = nothing
+global FMIBUILD_LOGGING = true
+global FMIBUILD_INSTANCES = []
 
 Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     dllLoc = unsafe_string(_dllLoc)
     comps = splitpath(dllLoc)
-    dllLoc = joinpath(comps[1:end-3]..., "resources")
+    resLoc = joinpath(comps[1:end-3]..., "resources")
+
+    @info "init_FMU(...)\nDLL location: $(dllLoc)\nRessouces location: $(resLoc)"
 
     global FMIBUILD_FMU, FMIBUILD_CONSTRUCTOR
-    FMIBUILD_FMU = FMIBUILD_CONSTRUCTOR(dllLoc)
+    FMIBUILD_FMU = FMIBUILD_CONSTRUCTOR(resLoc)
+
+    if !isnothing(FMIBUILD_FMU)
+        @info "init_FMU(...): FMU constructed successfully."
+    else
+        @error "init_FMU(...): FMU construction failed!"
+    end
+
     nothing
 end
 
@@ -43,19 +46,19 @@ Base.@ccallable function fmi2GetVersion()::fmi2String
 end
 
 # 2.1.5
-Base.@ccallable function fmi2Instantiate(instanceName::fmi2String,
+Base.@ccallable function fmi2Instantiate(_instanceName::fmi2String,
                                          fmuType::fmi2Type,
-                                         fmuGUID::fmi2String,
-                                         fmuResourceLocation::fmi2String,
-                                         functions::Ptr{fmi2CallbackFunctions},
+                                         _fmuGUID::fmi2String,
+                                         _fmuResourceLocation::fmi2String,
+                                         _functions::Ptr{fmi2CallbackFunctions},
                                          visible::fmi2Boolean,
                                          loggingOn::fmi2Boolean)::fmi2Component
-    return FMICore.fmi2Instantiate(FMIBUILD_FMU.cInstantiate, instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn)
+    
+    return FMICore.fmi2Instantiate(FMIBUILD_FMU.cInstantiate, _instanceName, fmuType, _fmuGUID, _fmuResourceLocation, _functions, visible, loggingOn)
 end
 
 Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
-    FMICore.fmi2FreeInstance!(FMIBUILD_FMU.cFreeInstance, _component)
-    nothing
+    return FMICore.fmi2FreeInstance!(FMIBUILD_FMU.cFreeInstance, _component)
 end
 
 Base.@ccallable function fmi2SetDebugLogging(_component::fmi2Component, loggingOn::fmi2Boolean, nCategories::Csize_t, categories::Ptr{fmi2String})::fmi2Status 
