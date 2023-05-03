@@ -23,6 +23,19 @@ import Dates
 # exports
 export fmi2Save
 
+# returns the path for a given package name (`nothing` if not installed)
+function packagePath(pkg)
+    path = Base.find_package(pkg)
+
+    if isnothing(path)
+        return nothing 
+    end
+
+    splits = splitpath(path)
+
+    return joinpath(splits[1:end-2]...)
+end
+
 """
     fmi2Save(fmu::FMU2, 
      fmu_path::String, 
@@ -221,6 +234,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     # installedPkgs = split(String(take!(buf)), "\n")
     # installedPkgs = installedPkgs[3:end] # skip header 
 
+    fmiexportPath = packagePath("FMIExport")
+
     # adding Pkgs
     Pkg.activate(merge_dir)
     # for pkg in installedPkgs
@@ -228,6 +243,20 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     #     Pkg.add(pkgname)
     #     @info "[Build FMU]    > Added `$(pkgname)`"
     # end
+
+    # redirect FMIExport.jl package (if locally checked out, this is necessary for Github-CI to use the current version from a PR)
+    if haskey(Pkg.project().dependencies, "FMIExport")
+        old_fmiexportPath = packagePath("FMIExport")
+        if lowercase(old_fmiexportPath) == lowercase(fmiexportPath)
+            @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
+        end
+        Pkg.add(path=fmiexportPath)
+    else
+        @info "[Build FMU]    > FMU has no dependency on `FMIExport`."
+    end
+
     Pkg.add("FMICore") 
     core_version = Pkg.dependencies()[Base.UUID("8af89139-c281-408e-bce2-3005eb87462f")].version
     @assert core_version >= v"0.17.0" "Installed FMICore < v0.17.0, this is not supported. Please file an issue on GitHub."
