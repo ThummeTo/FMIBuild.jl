@@ -17,12 +17,12 @@
 
 2\. Install [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
 ```julia-repl
-(@v1.6) pkg> add FMIBuild
+(@v1.x) pkg> add FMIBuild
 ```
 
 (3)\. If you want to check that everything works correctly, you can run the tests bundled with [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
 ```julia-repl
-(@v1.6) pkg> test FMIBuild
+(@v1.x) pkg> test FMIBuild
 ```
 
 ## What FMI.jl-Library should I use?

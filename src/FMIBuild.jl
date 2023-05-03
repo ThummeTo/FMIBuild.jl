@@ -57,7 +57,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
 
 # Keyword arguments
     - `standalone` if the FMU should be build in standalone-mode, meaning without external dependencies to a Julia-Installation (default=`true`) 
-    - `compress` if the FMU archive should be compressed to save disk space. On the other hand, this may enlarge loading time (default=`false`) 
+    - `compress` if the FMU archive should be compressed to save disk space. On the other hand, this may enlarge loading time (default=`true`) 
     - `cleanup` if the unzipped FMU archive should be deleted after creation (default=`true`) 
     - `removeLibDependency` removes the FMIBuild.jl-dependency, so it will not be part of the resulting FMU (default=`true`) 
     - `removeNoExportBlocks` removes the blocks marked with `### FMIBUILD_NO_EXPORT_BEGIN ###` and `### FMIBUILD_NO_EXPORT_END ###` from the `fmu_src_file`, so it will not be part of the resulting FMU (default=`true`) 
@@ -67,7 +67,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
 """
 function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
     standalone=true, 
-    compress=false, 
+    compress=true, 
     cleanup=true, 
     removeLibDependency=true,
     removeNoExportBlocks=true,
@@ -219,11 +219,11 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
 
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
-    preCompState = 1
+    currentCompState = 1
     try 
-        preCompState = ENV["JULIA_PKG_PRECOMPILE_AUTO"]
+        currentCompState = ENV["JULIA_PKG_PRECOMPILE_AUTO"]
     catch e 
-        preCompState = 1
+        currentCompState = 1
     end
     ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
 
@@ -251,8 +251,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
         else
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
+            Pkg.add(path=fmiexportPath)
         end
-        Pkg.add(path=fmiexportPath)
     else
         @info "[Build FMU]    > FMU has no dependency on `FMIExport`."
     end
@@ -275,8 +275,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     end
 
     Pkg.activate(currentEnv)
-    #Pkg.resolve()
-    ENV["JULIA_PKG_PRECOMPILE_AUTO"]=preCompState
+    ENV["JULIA_PKG_PRECOMPILE_AUTO"] = currentCompState
     @info "[Build FMU] ... adding/removing dependencies done."
     
     @info "[Build FMU] ... generating new FMU source file at $(joinpath(merge_dir, fmu_src_in_merge_dir))"
