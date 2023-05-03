@@ -221,6 +221,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     # installedPkgs = split(String(take!(buf)), "\n")
     # installedPkgs = installedPkgs[3:end] # skip header 
 
+    fmiexportPath = Base.find_package("FMIExport")
+
     # adding Pkgs
     Pkg.activate(merge_dir)
     # for pkg in installedPkgs
@@ -228,6 +230,20 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     #     Pkg.add(pkgname)
     #     @info "[Build FMU]    > Added `$(pkgname)`"
     # end
+
+    # redirect FMIExport.jl package (if locally checked out, this is necessary for Github-CI to use the current version from a PR)
+    if haskey(Pkg.project().dependencies, "FMIExport")
+        old_fmiexportPath = Base.find_package("FMIExport")
+        if old_fmiexportPath == fmiexportPath
+            @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
+        end
+        Pkg.add(fmiexportPath)
+    else
+        @info "[Build FMU]    > FMU has no dependency on `FMIExport`."
+    end
+
     Pkg.add("FMICore") 
     core_version = Pkg.dependencies()[Base.UUID("8af89139-c281-408e-bce2-3005eb87462f")].version
     @assert core_version >= v"0.17.0" "Installed FMICore < v0.17.0, this is not supported. Please file an issue on GitHub."
