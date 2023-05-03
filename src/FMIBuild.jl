@@ -247,7 +247,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     # redirect FMIExport.jl package (if locally checked out, this is necessary for Github-CI to use the current version from a PR)
     if haskey(Pkg.project().dependencies, "FMIExport")
         old_fmiexportPath = packagePath("FMIExport")
-        if old_fmiexportPath == fmiexportPath
+        if lowercase(old_fmiexportPath) == lowercase(fmiexportPath)
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
         else
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
