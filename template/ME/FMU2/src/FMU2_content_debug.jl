@@ -22,15 +22,15 @@ Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     comps = splitpath(dllLoc)
     resLoc = joinpath(comps[1:end-3]..., "resources")
 
-    @info "init_FMU(...)\nDLL location: $(dllLoc)\nRessouces location: $(resLoc)"
+    @info "init_FMU(...)\nDLL location: $(dllLoc)\nResources location: $(resLoc)"
 
     global FMIBUILD_FMU, FMIBUILD_CONSTRUCTOR
     FMIBUILD_FMU = FMIBUILD_CONSTRUCTOR(resLoc)
 
-    if !isnothing(FMIBUILD_FMU)
-        @info "init_FMU(...): FMU constructed successfully."
-    else
+    if isnothing(FMIBUILD_FMU)
         @error "init_FMU(...): FMU construction failed!"
+    else
+        @info "init_FMU(...): FMU constructed successfully."
     end
 
     nothing
