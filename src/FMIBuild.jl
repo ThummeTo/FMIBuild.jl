@@ -74,8 +74,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     removeLibDependency=true,
     removeNoExportBlocks=true,
     resources::Union{Dict{String, String}, Nothing}=nothing,
-    surpressWarnings::Bool=false,
     debug::Bool=false,
+    surpressWarnings::Bool=false,
     pkg_comp_kwargs...)
 
     startCompilation = time()
@@ -248,9 +248,12 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     # end
 
     # redirect FMIExport.jl package (if locally checked out, this is necessary for Github-CI to use the current version from a PR)
-    if haskey(Pkg.project().dependencies, "FMIExport")
+    if !isnothing(fmiexportPath)
         old_fmiexportPath = packagePath("FMIExport")
-        if !isnothing(old_fmiexportPath) && lowercase(old_fmiexportPath) == lowercase(fmiexportPath)
+        if isnothing(old_fmiexportPath)
+            @info "[Build FMU]    > `FMIExport` not installed, adding at `$(fmiexportPath)`."
+            Pkg.add(path=fmiexportPath)
+        elseif lowercase(old_fmiexportPath) == lowercase(fmiexportPath)
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
         else
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
@@ -260,18 +263,20 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         @info "[Build FMU]    > FMU has no dependency on `FMIExport`."
     end
 
-    old_fmicorePath = packagePath("FMICore")
-    if haskey(Pkg.project().dependencies, "FMICore")
+    if !isnothing(fmicorePath)
         old_fmicorePath = packagePath("FMICore")
-        if !isnothing(old_fmicorePath) && lowercase(old_fmicorePath) == lowercase(fmicorePath)
+        if isnothing(old_fmicorePath)
+            @info "[Build FMU]    > `FMICore` not installed, adding at `$(fmicorePath)`."
+            Pkg.add(path=fmicorePath)
+        elseif lowercase(old_fmicorePath) == lowercase(fmicorePath)
             @info "[Build FMU]    > Most recent version of `FMICore` already checked out, is `$(fmicorePath)`."
         else
             @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the current installation at `$(fmicorePath)`."
             Pkg.add(path=fmicorePath)
         end
     else
-        @info "[Build FMU]    > Adding `FMICore` with the current installation at `$(fmicorePath)`."
-        Pkg.add(path=fmicorePath)
+        @info "[Build FMU]    > Adding `FMICore` with the current installation from registrator."
+        Pkg.add("FMICore")
     end
 
     #@info "[Build FMU]    > Added LLVMExtra_jll"
