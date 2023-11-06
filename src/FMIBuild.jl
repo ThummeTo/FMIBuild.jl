@@ -138,7 +138,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     md_path = joinpath(target_dir, fmu_name, "modelDescription.xml")
 
     bin_dir = joinpath(target_dir, fmu_name, "binaries")
-    libext = ""
+    libext = nothing
 
     # checking architecture
     juliaArch = Sys.WORD_SIZE
@@ -164,7 +164,7 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         end
     end
 
-    @assert length(libext) > 0 "fmiBuild(...): Unsupported target platform. Supporting Windows (64-, 32-bit), Linux (64-bit) and MacOS (64-bit). Please open an issue online if you need further architectures."
+    @assert !isnothing(libext) "fmiBuild(...): Unsupported target platform. Supporting Windows (64-, 32-bit), Linux (64-bit) and MacOS (64-bit). Please open an issue online if you need further architectures."
 
     mkpath(bin_dir)
 
@@ -221,67 +221,56 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
 
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
-    currentCompState = 1
-    try 
-        currentCompState = ENV["JULIA_PKG_PRECOMPILE_AUTO"]
-    catch e 
-        currentCompState = 1
-    end
+    currentCompState = get(ENV, "JULIA_PKG_PRECOMPILE_AUTO", 1)
     ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
 
-    # check package dependencies 
-    # Pkg.activate(source_pkf_dir)
-    # buf = IOBuffer()
-    # Pkg.status(;io=buf)
-    # installedPkgs = split(String(take!(buf)), "\n")
-    # installedPkgs = installedPkgs[3:end] # skip header 
-
-    fmiexportPath = packagePath("FMIExport")
-    fmicorePath = packagePath("FMICore")
-
+    defaultEnv = get(ENV, "FMIExport_DefaultEnv", nothing)
+    if !isnothing(defaultEnv)
+        @info "[Build FMU]    > Using default environment `$(defaultEnv)` from environment variable `FMIExport_DefaultEnv`."
+    else 
+        defaultEnv = Base.active_project()
+        @info "[Build FMU]    > Using active environment `$(defaultEnv)`."
+    end
+    Pkg.activate(defaultEnv)
+    default_fmiexportPath = packagePath("FMIExport")
+    default_fmicorePath = packagePath("FMICore")
+    
     # adding Pkgs
     Pkg.activate(merge_dir)
-    # for pkg in installedPkgs
-    #     pkgname = pkg[14:end]
-    #     Pkg.add(pkgname)
-    #     @info "[Build FMU]    > Added `$(pkgname)`"
-    # end
 
-    # redirect FMIExport.jl package (if locally checked out, this is necessary for Github-CI to use the current version from a PR)
-    if !isnothing(fmiexportPath)
-        old_fmiexportPath = packagePath("FMIExport")
-        if isnothing(old_fmiexportPath)
-            @info "[Build FMU]    > `FMIExport` not installed, adding at `$(fmiexportPath)`."
-            Pkg.add(path=fmiexportPath)
-        elseif lowercase(old_fmiexportPath) == lowercase(fmiexportPath)
-            @info "[Build FMU]    > Most recent version of `FMIExport` already checked out, is `$(fmiexportPath)`."
-        else
-            @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(fmiexportPath)`."
-            Pkg.add(path=fmiexportPath)
-        end
+    if isnothing(default_fmicorePath)
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMICore`, adding `FMICore` from registry."
+        Pkg.add("FMICore")
     else
-        @info "[Build FMU]    > FMU has no dependency on `FMIExport`."
-    end
-
-    if !isnothing(fmicorePath)
         old_fmicorePath = packagePath("FMICore")
         if isnothing(old_fmicorePath)
-            @info "[Build FMU]    > `FMICore` not installed, adding at `$(fmicorePath)`."
-            Pkg.add(path=fmicorePath)
-        elseif lowercase(old_fmicorePath) == lowercase(fmicorePath)
-            @info "[Build FMU]    > Most recent version of `FMICore` already checked out, is `$(fmicorePath)`."
+            @info "[Build FMU]    > `FMICore` not installed, adding at `$(default_fmicorePath)`, adding `FMICore` from default environment."
+            Pkg.add(path=default_fmicorePath)
+        elseif lowercase(old_fmicorePath) == lowercase(default_fmicorePath)
+            @info "[Build FMU]    > Most recent version (as in default environment) of `FMICore` already checked out, is `$(default_fmicorePath)`."
         else
-            @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the current installation at `$(fmicorePath)`."
-            Pkg.add(path=fmicorePath)
-        end
-    else
-        @info "[Build FMU]    > Adding `FMICore` with the current installation from registrator."
-        Pkg.add("FMICore")
+            @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the default environment installation at `$(default_fmicorePath)`."
+            Pkg.add(path=default_fmicorePath)
+        end    
+    end
+    
+    # redirect FMIExport.jl package in case the active environment (the env the installer is called from)
+    # has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
+    if isnothing(default_fmiexportPath) # the environemnt the exporter is called from *has no* FMIExport.jl installed   
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIExport`."
+    else # the environemnt the exporter is called from *has* FMIExport.jl installed
+        old_fmiexportPath = packagePath("FMIExport")
+        if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
+            @info "[Build FMU]    > `FMIExport` for FMU not installed, adding at `$(default_fmiexportPath)`, adding `FMIExport` from default environment."
+            Pkg.add(path=default_fmiexportPath)
+        elseif lowercase(old_fmiexportPath) == lowercase(default_fmiexportPath) # the FMU is already using the most recent version of FMIExport.jl
+            @info "[Build FMU]    > Most recent version of `FMIExport` already checked out for FMU, is `$(default_fmiexportPath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(default_fmiexportPath)` for FMU ."
+            Pkg.add(path=default_fmiexportPath)
+        end   
     end
 
-    #@info "[Build FMU]    > Added LLVMExtra_jll"
-    #Pkg.add("LLVMExtra_jll")
-    #Pkg.add(name="FMICore", version="0.7.1")
     if removeLibDependency
         cdata = replace(cdata, r"(using|import) FMIBuild" => "")
         try
@@ -345,12 +334,11 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
     startPacking = time()
 
     @info "[Build FMU] Building model description ..."
-    #buildModelDescription(md_path, fmu_name, fmu_src_file)
     fmi2SaveModelDescription(fmu.modelDescription, md_path)
     @info "[Build FMU] ... building model description done."
 
-    @info "[Build FMU] Zipping FMU ..."
     # parse and zip directories
+    @info "[Build FMU] Zipping FMU ..."
     zipfile = joinpath(target_dir, fmu_name * ".zip")
     zdir = ZipFile.Writer(zipfile) 
     for (root, dirs, files) in walkdir(joinpath(target_dir, fmu_name))
@@ -367,20 +355,20 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         end
     end
     close(zdir)
+
     # Rename ZIP-file to FMU-file
     cp(joinpath(target_dir, fmu_name * ".zip"), joinpath(fmu_dir, fmu_name * ".fmu"); force=true) 
     @info "[Build FMU] ... zipping FMU done."
 
     if cleanup
         @info "[Build FMU] Clean up ..."
-        # Clean-up is done by saving in a temporary directory (which may be deleted by the OS) 
+        # ToDo: Clean-up is done by saving in a temporary directory (which may be deleted by the OS) 
         @info "[Build FMU] ... clean up done."
     end 
 
     stopPacking = time()
 
     # output message 
-
     dt = stopPacking-startCompilation
     per = (stopPacking-startPacking) / dt * 100.0
     mins = 0

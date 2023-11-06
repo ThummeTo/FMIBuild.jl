@@ -6,9 +6,10 @@
 import FMICore
 
 using FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
-using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusError, fmi2StatusFatal
+using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusOK, fmi2StatusWarning, fmi2StatusError, fmi2StatusFatal
 using FMICore: fmi2Status, fmi2Type, fmi2StatusToString
 using FMICore: FMU2Component
+import FMICore: logInfo, logWarning, logError
 
 ##############
 
@@ -16,6 +17,37 @@ global FMIBUILD_FMU = nothing
 global FMIBUILD_CONSTRUCTOR = nothing
 global FMIBUILD_LOGGING = true
 global FMIBUILD_INSTANCES = []
+
+##############
+
+function dereferenceInstance(address::fmi2Component)
+    global FMIBUILD_FMU
+    for component in FMIBUILD_FMU.components
+        if component.compAddr == address
+            return component
+        end
+    end
+
+    @warn "Unknown instance at $(address)."
+    return nothing
+end
+
+function logInfo(_component::fmi2Component, message, status::fmi2Status=fmi2StatusOK)
+    component = dereferenceInstance(_component)
+    logInfo(component, message, status)
+end
+
+function logWarning(_component::fmi2Component, message, status::fmi2Status=fmi2StatusWarning)
+    component = dereferenceInstance(_component)
+    logWarning(component, message, status)
+end
+
+function logError(_component::fmi2Component, message, status::fmi2Status=fmi2StatusError)
+    component = dereferenceInstance(_component)
+    logError(component, message, status)
+end
+
+##############
 
 Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     dllLoc = unsafe_string(_dllLoc)
