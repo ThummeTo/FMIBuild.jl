@@ -221,20 +221,15 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
 
     @info "[Build FMU] Adding/removing dependencies ..."
     currentEnv = Base.active_project()
-    currentCompState = 1
-    try 
-        currentCompState = ENV["JULIA_PKG_PRECOMPILE_AUTO"]
-    catch e 
-        currentCompState = 1
-    end
+    currentCompState = get(ENV, "JULIA_PKG_PRECOMPILE_AUTO", 1)
     ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
 
-    defaultEnv = nothing
-    try
-        defaultEnv = ENV["FMIExport_DefaultEnv"]
+    defaultEnv = get(ENV, "FMIExport_DefaultEnv", nothing)
+    if !isnothing(defaultEnv)
         @info "[Build FMU]    > Using default environment `$(defaultEnv)` from environment variable `FMIExport_DefaultEnv`."
-    catch e 
+    else 
         defaultEnv = Base.active_project()
+        @info "[Build FMU]    > Using active environment `$(defaultEnv)`."
     end
     Pkg.activate(defaultEnv)
     default_fmiexportPath = packagePath("FMIExport")
