@@ -5,23 +5,25 @@
 
 module FMIBuild
 
-using FMICore: FMU2, FMU2Component, fmi2ModelDescription, fmi2ValueReference, fmi2Component, fmi2ComponentEnvironment, fmi2Status, fmi2EventInfo
-using FMICore: fmi2Type, fmi2TypeModelExchange, fmi2TypeCoSimulation
-using FMICore: fmi2True, fmi2False
-using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
-using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
-using FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
-using FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
+using FMIBase
+
+#using FMICore: FMU2, FMU2Component, fmi2ModelDescription, fmi2ValueReference, fmi2Component, fmi2ComponentEnvironment, fmi2Status, fmi2EventInfo
+#using FMICore: fmi2Type, fmi2TypeModelExchange, fmi2TypeCoSimulation
+#using FMICore: fmi2True, fmi2False
+#using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
+#using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
+#using FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
+#using FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
 #using FMIExport: fmi2SaveModelDescription
 
 import PackageCompiler
 import Pkg
-import ZipFile
-using EzXML
+import FMIBase.ZipFile
+using FMIBase.EzXML
 import Dates
 
 # exports
-export fmi2Save
+export saveFMU
 
 # returns the path for a given package name (`nothing` if not installed)
 function packagePath(pkg; )
@@ -67,7 +69,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
     - `surpressWarnings::Bool` an indicator wheater warnings should be surpressed (default=false)
 """
-function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
+function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
     standalone=true, 
     compress=true, 
     cleanup=true, 
@@ -254,8 +256,8 @@ function fmi2Save(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Stri
         end    
     end
     
-    # redirect FMIExport.jl package in case the active environment (the env the installer is called from)
-    # has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
+    # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
+    #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
     if isnothing(default_fmiexportPath) # the environemnt the exporter is called from *has no* FMIExport.jl installed   
         @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIExport`."
     else # the environemnt the exporter is called from *has* FMIExport.jl installed

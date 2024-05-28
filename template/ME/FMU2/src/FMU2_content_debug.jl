@@ -3,11 +3,10 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 #
 
-import FMICore
-
+using FMICore
 using FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
 using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusOK, fmi2StatusWarning, fmi2StatusError, fmi2StatusFatal
-using FMICore: fmi2Status, fmi2Type, fmi2StatusToString
+using FMICore: fmi2Status, fmi2Type
 using FMICore: FMU2Component
 import FMICore: logInfo, logWarning, logError
 
@@ -129,7 +128,7 @@ Base.@ccallable function fmi2SetDebugLogging(_component::fmi2Component, loggingO
         end
         status = FMICore.fmi2SetDebugLogging(FMIBUILD_FMU.cSetDebugLogging, _component, loggingOn, nCategories, categories)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -149,7 +148,7 @@ Base.@ccallable function fmi2SetupExperiment(_component::fmi2Component, toleranc
         end
         status = FMICore.fmi2SetupExperiment(FMIBUILD_FMU.cSetupExperiment, _component, toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -169,7 +168,7 @@ Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component):
         end
         status = FMICore.fmi2EnterInitializationMode(FMIBUILD_FMU.cEnterInitializationMode, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -189,7 +188,7 @@ Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::
         end
         status = FMICore.fmi2ExitInitializationMode(FMIBUILD_FMU.cExitInitializationMode, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -209,7 +208,7 @@ Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
         end
         status = FMICore.fmi2Terminate(FMIBUILD_FMU.cTerminate, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -229,7 +228,7 @@ Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
         end
         status = FMICore.fmi2Reset(FMIBUILD_FMU.cReset, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e 
         logError(_component, "Exception thrown:\tIn function: fmi2Reset($(_component))\n\tMessage: $(e)\n\tStack:")
@@ -248,7 +247,7 @@ Base.@ccallable function fmi2GetReal(_component::fmi2Component, _vr::Ptr{fmi2Val
         end
         status = FMICore.fmi2GetReal!(FMIBUILD_FMU.cGetReal, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e 
         logError(_component, "Exception thrown:\tIn function: fmi2GetReal($(_component), $(_vr), $(nvr), $(_value))\n\tMessage: $(e)\n\tStack:")
@@ -267,7 +266,7 @@ Base.@ccallable function fmi2GetInteger(_component::fmi2Component, _vr::Ptr{fmi2
         end
         status = FMICore.fmi2GetInteger!(FMIBUILD_FMU.cGetInteger, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -287,7 +286,7 @@ Base.@ccallable function fmi2GetBoolean(_component::fmi2Component, _vr::Ptr{fmi2
         end
         status = FMICore.fmi2GetBoolean!(FMIBUILD_FMU.cGetBoolean, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -307,7 +306,7 @@ Base.@ccallable function fmi2GetString(_component::fmi2Component, _vr::Ptr{fmi2V
         end
         status = FMICore.fmi2GetString!(FMIBUILD_FMU.cGetString, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -327,7 +326,7 @@ Base.@ccallable function fmi2SetReal(_component::fmi2Component, _vr::Ptr{fmi2Val
         end
         status = FMICore.fmi2SetReal(FMIBUILD_FMU.cSetReal, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -347,7 +346,7 @@ Base.@ccallable function fmi2SetInteger(_component::fmi2Component, _vr::Ptr{fmi2
         end
         status = FMICore.fmi2SetInteger(FMIBUILD_FMU.cSetInteger, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -367,7 +366,7 @@ Base.@ccallable function fmi2SetBoolean(_component::fmi2Component, _vr::Ptr{fmi2
         end
         status = FMICore.fmi2SetBoolean(FMIBUILD_FMU.cSetBoolean, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -387,7 +386,7 @@ Base.@ccallable function fmi2SetString(_component::fmi2Component, _vr::Ptr{fmi2V
         end
         status = FMICore.fmi2SetString(FMIBUILD_FMU.cSetString, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -407,7 +406,7 @@ Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real):
         end
         status = FMICore.fmi2SetTime(FMIBUILD_FMU.cSetTime, _component, time)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -427,7 +426,7 @@ Base.@ccallable function fmi2SetContinuousStates(_component::fmi2Component, _x::
         end
         status = FMICore.fmi2SetContinuousStates(FMIBUILD_FMU.cSetContinuousStates, _component, _x, nx)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -447,7 +446,7 @@ Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Stat
         end
         status = FMICore.fmi2EnterEventMode(FMIBUILD_FMU.cEnterEventMode, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -467,7 +466,7 @@ Base.@ccallable function fmi2NewDiscreteStates(_component::fmi2Component, _fmi2e
         end
         status = FMICore.fmi2NewDiscreteStates!(FMIBUILD_FMU.cNewDiscreteStates, _component, _fmi2eventInfo)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -487,7 +486,7 @@ Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component):
         end
         status = FMICore.fmi2EnterContinuousTimeMode(FMIBUILD_FMU.cEnterContinuousTimeMode, _component)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -507,7 +506,7 @@ Base.@ccallable function fmi2CompletedIntegratorStep(_component::fmi2Component, 
         end
         status = FMICore.fmi2CompletedIntegratorStep!(FMIBUILD_FMU.cCompletedIntegratorStep, _component, noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -527,7 +526,7 @@ Base.@ccallable function fmi2GetDerivatives(_component::fmi2Component, _derivati
         end
         status = FMICore.fmi2GetDerivatives!(FMIBUILD_FMU.cGetDerivatives, _component, _derivatives, nx)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: fmi2GetDerivatives($(_component), $(_derivatives), $(nx))\n\tMessage: $(e)\n\tStack:")
@@ -547,7 +546,7 @@ Base.@ccallable function fmi2GetEventIndicators(_component::fmi2Component, _even
         end
         status = FMICore.fmi2GetEventIndicators!(FMIBUILD_FMU.cGetEventIndicators, _component, _eventIndicators, ni)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -567,7 +566,7 @@ Base.@ccallable function fmi2GetContinuousStates(_component::fmi2Component, _x::
         end
         status = FMICore.fmi2GetContinuousStates!(FMIBUILD_FMU.cGetContinuousStates, _component, _x, nx)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
@@ -587,7 +586,7 @@ Base.@ccallable function fmi2GetNominalsOfContinuousStates(_component::fmi2Compo
         end
         status = FMICore.fmi2GetNominalsOfContinuousStates!(FMIBUILD_FMU.cGetNominalsOfContinuousStates, _component, _x_nominal, nx)
         if FMIBUILD_LOGGING
-            logInfo(_component, "\t-> $(status) [$(fmi2StatusToString(status))]")
+            logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
         logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
