@@ -203,7 +203,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
     cdata = read(f, String);
     close(f)
 
-    # ToDo: This will fail badly on `fmi2Save(a, (b, c), d)` -> use Julia code parser
+    # ToDo: This will fail badly on `saveFMU(a, (b, c), d)` -> use Julia code parser
     
     if removeNoExportBlocks
         @info "[Build FMU] Removing `FMIBUILD_NO_EXPORT_*` blocks ..."
@@ -240,22 +240,6 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
     # adding Pkgs
     Pkg.activate(merge_dir)
 
-    if isnothing(default_fmicorePath)
-        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMICore`, adding `FMICore` from registry."
-        Pkg.add("FMICore")
-    else
-        old_fmicorePath = packagePath("FMICore")
-        if isnothing(old_fmicorePath)
-            @info "[Build FMU]    > `FMICore` not installed, adding at `$(default_fmicorePath)`, adding `FMICore` from default environment."
-            Pkg.add(path=default_fmicorePath)
-        elseif lowercase(old_fmicorePath) == lowercase(default_fmicorePath)
-            @info "[Build FMU]    > Most recent version (as in default environment) of `FMICore` already checked out, is `$(default_fmicorePath)`."
-        else
-            @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the default environment installation at `$(default_fmicorePath)`."
-            Pkg.add(path=default_fmicorePath)
-        end    
-    end
-    
     # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
     #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
     if isnothing(default_fmiexportPath) # the environemnt the exporter is called from *has no* FMIExport.jl installed   
@@ -271,6 +255,23 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(default_fmiexportPath)` for FMU ."
             Pkg.add(path=default_fmiexportPath)
         end   
+    end
+
+    # FMICore.jl
+    if isnothing(default_fmicorePath)
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMICore`, adding `FMICore` from registry."
+        Pkg.add("FMICore")
+    else
+        old_fmicorePath = packagePath("FMICore")
+        if isnothing(old_fmicorePath)
+            @info "[Build FMU]    > `FMICore` not installed, adding at `$(default_fmicorePath)`, adding `FMICore` from default environment."
+            Pkg.add(path=default_fmicorePath)
+        elseif lowercase(old_fmicorePath) == lowercase(default_fmicorePath)
+            @info "[Build FMU]    > Most recent version (as in default environment) of `FMICore` already checked out, is `$(default_fmicorePath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the default environment installation at `$(default_fmicorePath)`."
+            Pkg.add(path=default_fmicorePath)
+        end    
     end
 
     if removeLibDependency
