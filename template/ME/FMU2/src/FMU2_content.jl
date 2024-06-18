@@ -3,12 +3,11 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 #
 
-using FMICore
-using FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
-using FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusOK, fmi2StatusWarning, fmi2StatusError, fmi2StatusFatal
-using FMICore: fmi2Status, fmi2Type
-using FMICore: FMU2Component
-import FMICore: logInfo, logWarning, logError
+using FMIBase.FMICore
+using FMIBase.FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
+using FMIBase.FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusOK, fmi2StatusWarning, fmi2StatusError, fmi2StatusFatal
+using FMIBase.FMICore: fmi2Status, fmi2Type
+import FMIBase: logInfo, logWarning, logError, FMU2Component
 
 ##############
 

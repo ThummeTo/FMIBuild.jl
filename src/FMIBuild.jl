@@ -14,7 +14,6 @@ using FMIBase
 #using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
 #using FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
 #using FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
-#using FMIExport: fmi2SaveModelDescription
 
 import PackageCompiler
 import Pkg
@@ -39,7 +38,7 @@ function packagePath(pkg; )
 end
 
 """
-    fmi2Save(fmu::FMU2, 
+    saveFMU(fmu::FMU2, 
      fmu_path::String, 
      fmu_src_file::Union{Nothing, String}=nothing; 
      standalone=true, 
@@ -235,7 +234,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
     end
     Pkg.activate(defaultEnv)
     default_fmiexportPath = packagePath("FMIExport")
-    default_fmicorePath = packagePath("FMICore")
+    default_fmibasePath = packagePath("FMIBase")
     
     # adding Pkgs
     Pkg.activate(merge_dir)
@@ -257,20 +256,20 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
         end   
     end
 
-    # FMICore.jl
-    if isnothing(default_fmicorePath)
-        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMICore`, adding `FMICore` from registry."
-        Pkg.add("FMICore")
+    # FMIBase.jl
+    if isnothing(default_fmibasePath)
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIBase`, adding `FMIBase` from registry."
+        Pkg.add("FMIBase")
     else
-        old_fmicorePath = packagePath("FMICore")
-        if isnothing(old_fmicorePath)
-            @info "[Build FMU]    > `FMICore` not installed, adding at `$(default_fmicorePath)`, adding `FMICore` from default environment."
-            Pkg.add(path=default_fmicorePath)
-        elseif lowercase(old_fmicorePath) == lowercase(default_fmicorePath)
-            @info "[Build FMU]    > Most recent version (as in default environment) of `FMICore` already checked out, is `$(default_fmicorePath)`."
+        old_fmibasePath = packagePath("FMIBase")
+        if isnothing(old_fmibasePath)
+            @info "[Build FMU]    > `FMIBase` not installed, adding at `$(default_fmibasePath)`, adding `FMIBase` from default environment."
+            Pkg.add(path=default_fmibasePath)
+        elseif lowercase(old_fmibasePath) == lowercase(default_fmibasePath)
+            @info "[Build FMU]    > Most recent version (as in default environment) of `FMIBase` already checked out, is `$(default_fmibasePath)`."
         else
-            @info "[Build FMU]    > Replacing `FMICore` at `$(old_fmicorePath)` with the default environment installation at `$(default_fmicorePath)`."
-            Pkg.add(path=default_fmicorePath)
+            @info "[Build FMU]    > Replacing `FMIBase` at `$(old_fmibasePath)` with the default environment installation at `$(default_fmibasePath)`."
+            Pkg.add(path=default_fmibasePath)
         end    
     end
 
@@ -337,7 +336,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
     startPacking = time()
 
     @info "[Build FMU] Building model description ..."
-    fmi2SaveModelDescription(fmu.modelDescription, md_path)
+    saveModelDescription(fmu.modelDescription, md_path)
     @info "[Build FMU] ... building model description done."
 
     # parse and zip directories
@@ -468,15 +467,15 @@ function dependencyKindString(dependencies::AbstractArray)
         return "" 
     end
 
-    depStr = "$(fmi2DependencyKindToString(dependencies[1]))"
+    depStr = "$(dependencyKindToString(md, dependencies[1]))"
     for d in 2:length(dependencies)
-        depStr *= " $(fmi2DependencyKindToString(dependencies[d]))"
+        depStr *= " $(dependencyKindToString(md, dependencies[d]))"
     end
 
     return depStr
 end
 
-function addFieldsAsAttributes(node, _struct, skiplist=())
+function addFieldsAsAttributes(md, node, _struct, skiplist=())
     for field in fieldnames(typeof(_struct))
         if field ∉ skiplist
 
@@ -496,13 +495,13 @@ function addFieldsAsAttributes(node, _struct, skiplist=())
                 value = (value ? "true" : "false")
             elseif field == :causality
 
-                value = fmi2CausalityToString(value)
+                value = causalityToString(md, value)
             elseif field == :variability
 
-                value = fmi2VariabilityToString(value)
+                value = variabilityToString(md, value)
             elseif field == :initial
 
-                value = fmi2InitialToString(value)
+                value = initialToString(md, value)
             elseif field == :dependencies
 
                 if length(value) <= 0
@@ -518,9 +517,9 @@ function addFieldsAsAttributes(node, _struct, skiplist=())
                 if length(value) <= 0
                     return "" 
                 end
-                depStr = "$(fmi2DependencyKindToString(value[1]))"
+                depStr = "$(dependencyKindToString(md, value[1]))"
                 for d in 2:length(value)
-                    depStr *= " $(fmi2DependencyKindToString(value[d]))"
+                    depStr *= " $(dependencyKindToString(md, value[d]))"
                 end
                 value = depStr
             end
@@ -530,7 +529,7 @@ function addFieldsAsAttributes(node, _struct, skiplist=())
     end
 end
 
-function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
+function saveModelDescription(md::fmi2ModelDescription, file_path::String)
     doc = XMLDocument()
     
     doc_root = ElementNode("fmiModelDescription") 
@@ -551,7 +550,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         elseif isa(md.generationDateAndTime, String)
             dateTimeString = md.generationDateAndTime
         else 
-            @warn "fmi2SaveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(md.generationDateAndTime)` (typeof `$(typeof(md.generationDateAndTime))`)."
+            @warn "saveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(md.generationDateAndTime)` (typeof `$(typeof(md.generationDateAndTime))`)."
         end
         link!(doc_root, AttributeNode("generationDateAndTime", dateTimeString))
     end
@@ -565,13 +564,13 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
     if !isnothing(md.modelExchange)
         me = ElementNode("ModelExchange")
         link!(doc_root, me)
-        addFieldsAsAttributes(me, md.modelExchange)
+        addFieldsAsAttributes(md, me, md.modelExchange)
     end
 
     if !isnothing(md.coSimulation)
         cs = ElementNode("CoSimulation")
         link!(doc_root, cs)
-        addFieldsAsAttributes(cs, md.coSimulation)
+        addFieldsAsAttributes(md, cs, md.coSimulation)
     end
 
     if !isnothing(md.typeDefinitions)
@@ -582,32 +581,32 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             st = ElementNode("SimpleType")
             link!(td, st)
 
-            addFieldsAsAttributes(st, typdef, (:attribute,))
+            addFieldsAsAttributes(md, st, typdef, (:attribute,))
 
             if isa(typdef.attribute, fmi2RealAttributes)
                 tn = ElementNode("Real")
-                addFieldsAsAttributes(tn, typdef.attribute)
+                addFieldsAsAttributes(md, tn, typdef.attribute)
                 link!(st, tn)
             elseif isa(typdef.attribute, fmi2IntegerAttributes)
                 tn = ElementNode("Integer")
-                addFieldsAsAttributes(tn, typdef.attribute)
+                addFieldsAsAttributes(md, tn, typdef.attribute)
                 link!(st, tn)
             elseif isa(typdef.attribute, fmi2BooleanAttributes)
                 tn = ElementNode("Boolean")
-                addFieldsAsAttributes(tn, typdef.attribute)
+                addFieldsAsAttributes(md, tn, typdef.attribute)
                 link!(st, tn)
             elseif isa(typdef.attribute, fmi2StringAttributes)
                 tn = ElementNode("String")
-                addFieldsAsAttributes(tn, typdef.attribute)
+                addFieldsAsAttributes(md, tn, typdef.attribute)
                 link!(st, tn)
             elseif isa(typdef.attribute, fmi2EnumerationAttributes)
                 tn = ElementNode("Enumeration")
-                addFieldsAsAttributes(tn, typdef.attribute, (:items,))
+                addFieldsAsAttributes(md, tn, typdef.attribute, (:items,))
                 link!(st, tn)
 
                 for j in 1:length(typdef.attribute)
                     itemNode = ElementNode("Item")
-                    addFieldsAsAttributes(itemNode, typdef.attribute[j])
+                    addFieldsAsAttributes(md, itemNode, typdef.attribute[j])
                     link!(tn, itemNode)
                 end
             else
@@ -626,42 +625,42 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
         sv_node = ElementNode("ScalarVariable")
         link!(mv, sv_node)
 
-        addFieldsAsAttributes(sv_node, sv, (:attribute,))
+        addFieldsAsAttributes(md, sv_node, sv, (:attribute,))
 
         # Real
         if sv.Real != nothing
             r_node = ElementNode("Real")
-            addFieldsAsAttributes(r_node, sv.Real, (:attributes,))
-            addFieldsAsAttributes(r_node, sv.attribute.attributes)
+            addFieldsAsAttributes(md, r_node, sv.Real, (:attributes,))
+            addFieldsAsAttributes(md, r_node, sv.attribute.attributes)
             link!(sv_node, r_node)
         end
 
         # Integer
         if sv.Integer != nothing
             i_node = ElementNode("Integer")
-            addFieldsAsAttributes(i_node, sv.Integer, (:attributes,))
-            addFieldsAsAttributes(i_node, sv.attribute.attributes)
+            addFieldsAsAttributes(md, i_node, sv.Integer, (:attributes,))
+            addFieldsAsAttributes(md, i_node, sv.attribute.attributes)
             link!(sv_node, i_node)
         end
 
         # Boolean
         if sv.Boolean != nothing
             b_node = ElementNode("Boolean")
-            addFieldsAsAttributes(b_node, sv.Boolean)
+            addFieldsAsAttributes(md, b_node, sv.Boolean)
             link!(sv_node, b_node)
         end
 
         # String
         if sv.String != nothing
             s_node = ElementNode("String")
-            addFieldsAsAttributes(s_node, sv.String)
+            addFieldsAsAttributes(md, s_node, sv.String)
             link!(sv_node, s_node)
         end
 
         # Enumeration
         if sv.Enumeration != nothing
             e_node = ElementNode("Enumeration")
-            addFieldsAsAttributes(e_node, sv.Enumeration)
+            addFieldsAsAttributes(md, e_node, sv.Enumeration)
             link!(sv_node, e_node)
         end
     end
@@ -677,7 +676,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.outputs[i]
 
             uk_node = ElementNode("Unknown")
-            addFieldsAsAttributes(uk_node, uk)
+            addFieldsAsAttributes(md, uk_node, uk)
             link!(outs, uk_node)
         end
     end
@@ -690,7 +689,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.derivatives[i]
 
             uk_node = ElementNode("Unknown")
-            addFieldsAsAttributes(uk_node, uk)
+            addFieldsAsAttributes(md, uk_node, uk)
             link!(ders, uk_node)
         end
     end
@@ -703,7 +702,7 @@ function fmi2SaveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk = md.modelStructure.initialUnknowns[i]
 
             uk_node = ElementNode("Unknown")
-            addFieldsAsAttributes(uk_node, uk)
+            addFieldsAsAttributes(md, uk_node, uk)
             link!(inis, uk_node)
         end
     end
