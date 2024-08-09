@@ -21,7 +21,7 @@ global FMIBUILD_INSTANCES = []
 function dereferenceInstance(address::fmi2Component)
     global FMIBUILD_FMU
     for component in FMIBUILD_FMU.components
-        if component.compAddr == address
+        if component.addr == address
             return component
         end
     end
@@ -88,7 +88,7 @@ Base.@ccallable function fmi2Instantiate(_instanceName::fmi2String,
 end
 
 Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
-    return FMICore.fmi2FreeInstance!(FMIBUILD_FMU.cFreeInstance, _component)
+    return FMICore.fmi2FreeInstance(FMIBUILD_FMU.cFreeInstance, _component)
 end
 
 Base.@ccallable function fmi2SetDebugLogging(_component::fmi2Component, loggingOn::fmi2Boolean, nCategories::Csize_t, categories::Ptr{fmi2String})::fmi2Status 
