@@ -12,8 +12,9 @@ using FMIBase
 #using FMICore: fmi2True, fmi2False
 #using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
 #using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
-#using FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
-#using FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
+
+using FMIBase.FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
+using FMIBase.FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
 
 import PackageCompiler
 import Pkg
@@ -46,7 +47,7 @@ end
      cleanup=true, 
      removeLibDependency=true,
      removeNoExportBlocks=true,
-     surpressWarnings::Bool=false,
+     suppressWarnings::Bool=false,
      debug::Bool=false,
      pkg_comp_kwargs...)
 
@@ -64,9 +65,9 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `cleanup` if the unzipped FMU archive should be deleted after creation (default=`true`) 
     - `removeLibDependency` removes the FMIBuild.jl-dependency, so it will not be part of the resulting FMU (default=`true`) 
     - `removeNoExportBlocks` removes the blocks marked with `### FMIBUILD_NO_EXPORT_BEGIN ###` and `### FMIBUILD_NO_EXPORT_END ###` from the `fmu_src_file`, so it will not be part of the resulting FMU (default=`true`) 
-    - `ressources` a Dictionary of ressources (srcPath::String => dstPath::String) for files to ship as part of the FMU
+    - `resources` a Dictionary of resources (srcPath::String => dstPath::String) for files to ship as part of the FMU
     - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
-    - `surpressWarnings::Bool` an indicator wheater warnings should be surpressed (default=false)
+    - `suppressWarnings::Bool` an indicator wether warnings should be suppressed (default=false)
 """
 function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
     standalone=true, 
@@ -76,7 +77,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
     removeNoExportBlocks=true,
     resources::Union{Dict{String, String}, Nothing}=nothing,
     debug::Bool=false,
-    surpressWarnings::Bool=false,
+    suppressWarnings::Bool=false,
     pkg_comp_kwargs...)
 
     startCompilation = time()
@@ -88,7 +89,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
 
     # warnings
 
-    if !surpressWarnings
+    if !suppressWarnings
         if fmu.modelDescription.modelName != fmu_fname
             @warn "This FMU has a model name `$(fmu.modelDescription.modelName)` that does not fit the FMU filename `$(fmu_fname).fmu`. Is this intended?"
         end
