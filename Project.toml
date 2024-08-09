@@ -1,7 +1,7 @@
 name = "FMIBuild"
 uuid = "226f0e26-6dd6-4589-ada7-1d32f6e1d800"
 authors = ["TT <tobias.thummerer@informatik.uni-augsburg.de>", "LM <lars.mikelsons@informatik.uni-augsburg.de>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
