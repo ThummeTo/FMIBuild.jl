@@ -5,7 +5,8 @@
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
-[![Run Tests](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Test.yml)
+[![Test (latest)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml) 
+[![Test (LTS)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLTS.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLTS.yml)
 [![Run PkgEval](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml)
 [![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
 

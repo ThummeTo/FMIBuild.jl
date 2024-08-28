@@ -1,26 +1,32 @@
-name: Run FMIBuild.jl tests
+name: Test v1.6 (LTS)
 
 on:
   workflow_dispatch:
-  push:
   pull_request:
+  push:
+    branches: 
+      - main
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - '.github/workflows/Test.yml'
+      - 'Project.toml'
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
-      # Don't cancel in-progress jobs if any matrix job fails
       fail-fast: false
       matrix:
-        julia-version: ['1.6', '1'] # "1" automatically expands to the latest stable 1.x release of Julia
+        julia-version: ['1.6']
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest]
         experimental: [false]
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Checks-out your repository
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Set up Julia
       - name: "Set up Julia"
@@ -29,9 +35,9 @@ jobs:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
 
-      # Set up cache
+     # Set up cache
       - name: "Set up cache"
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-artifacts
         with:
@@ -49,13 +55,3 @@ jobs:
       # Run the tests
       - name: "Run tests"
         uses: julia-actions/julia-runtest@v1
-
-      # Preprocess Coverage
-      - name: "Preprocess Coverage"
-        uses: julia-actions/julia-processcoverage@v1
-
-      # Run codecov
-      - name: "Run CodeCov"
-        uses: codecov/codecov-action@v2
-        with:
-          file: lcov.info
