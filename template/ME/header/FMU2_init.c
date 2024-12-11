@@ -85,18 +85,31 @@ void shutdown_julia(int retcode) { jl_atexit_hook(retcode); }
 
 // custom
 
+void constructor(short unsigned int* path)
+{
+    init_julia(0, NULL);
+
+    char* ptr = (char*)&path;
+    init_FMU(ptr);
+}
+
+void destructor(void)
+{
+    shutdown_julia(0);
+}
+
+#ifdef _WIN32
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
     switch (fdwReason)
     {
     case DLL_PROCESS_ATTACH:
-        init_julia(0, NULL);
 
         // get DLL path for resource location
-        char path[MAX_PATH];
+        short unsigned int path[MAX_PATH];
         HMODULE hm = NULL;
 
-        if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &init_julia, &hm) == 0)
+        if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR) &init_julia, &hm) == 0)
         {
             int ret = GetLastError();
             fprintf(stderr, "GetModuleHandle failed, error = %d\n", ret);
@@ -109,12 +122,41 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
             return (FALSE);
         }
 
-        char* ptr = (char*)&path;
-        init_FMU(ptr);
+        constructor(path);
         break;
     case DLL_PROCESS_DETACH:
-        shutdown_julia(0);
+        destructor();
         break;
     }
     return (TRUE);
 }
+
+#else
+CP_BEGIN_EXTERN_C
+__attribute__((constructor))
+/**
+ * initializer of the dylib.
+ */
+static void Initializer(int argc, char** argv, char** envp)
+{
+    char pid[20];
+    char path[PATH_MAX + 1] = {0};
+
+    sprintf(pid, "/proc/%d/exe", getpid());
+    readlink(pid, path, sizeof(path));
+    
+    constructor(string(path));
+}
+
+__attribute__((destructor))
+/** 
+ * It is called when dylib is being unloaded.
+ * 
+ */
+static void Finalizer()
+{
+    destructor();
+}
+
+CP_END_EXTERN_C
+#endif

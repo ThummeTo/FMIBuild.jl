@@ -242,9 +242,9 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
 
     # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
     #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
-    if isnothing(default_fmiexportPath) # the environemnt the exporter is called from *has no* FMIExport.jl installed   
+    if isnothing(default_fmiexportPath) # the environment the exporter is called from *has no* FMIExport.jl installed   
         @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIExport`."
-    else # the environemnt the exporter is called from *has* FMIExport.jl installed
+    else # the environment the exporter is called from *has* FMIExport.jl installed
         old_fmiexportPath = packagePath("FMIExport")
         if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
             @info "[Build FMU]    > `FMIExport` for FMU not installed, adding at `$(default_fmiexportPath)`, adding `FMIExport` from default environment."
@@ -326,7 +326,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
             cp(key, joinpath(bin_dir, "..", "..", "resources", val); force=true)
             @info "[Build FMU] \t $val"
         end
-        @info "[Build FMU] ... adding resoruce files done."
+        @info "[Build FMU] ... adding resource files done."
     end
 
     @info "[Build FMU] Patching libjulia.$(libext) @ `$(bin_dir)`..."
