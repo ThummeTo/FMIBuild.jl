@@ -132,11 +132,21 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 }
 
 #else
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#ifdef __cplusplus
+#define CP_BEGIN_EXTERN_C extern "C" {
+#define CP_END_EXTERN_C }
+#else
+#define CP_BEGIN_EXTERN_C
+#define CP_END_EXTERN_C
+#endif
+
 CP_BEGIN_EXTERN_C
+
 __attribute__((constructor))
-/**
- * initializer of the dylib.
- */
 static void Initializer(int argc, char** argv, char** envp)
 {
     char pid[20];
@@ -144,19 +154,16 @@ static void Initializer(int argc, char** argv, char** envp)
 
     sprintf(pid, "/proc/%d/exe", getpid());
     readlink(pid, path, sizeof(path));
-    
-    constructor(string(path));
+
+    constructor((short unsigned int*)path); 
 }
 
 __attribute__((destructor))
-/** 
- * It is called when dylib is being unloaded.
- * 
- */
 static void Finalizer()
 {
     destructor();
 }
 
 CP_END_EXTERN_C
+
 #endif

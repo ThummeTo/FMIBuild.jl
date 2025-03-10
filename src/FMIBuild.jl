@@ -149,7 +149,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
             bin_dir = joinpath(bin_dir, "win64")
             libext = "dll"
         elseif Sys.islinux()
-            bin_dir = joinpath(bin_dir, "x86_64-linux")
+            bin_dir = joinpath(bin_dir, "linux64")
             libext = "so"
         elseif Sys.isapple()
             bin_dir = joinpath(bin_dir, "x86_64-darwin")
@@ -165,7 +165,7 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
             # pass
         end
     end
-
+    
     @assert !isnothing(libext) "fmiBuild(...): Unsupported target platform. Supporting Windows (64-, 32-bit), Linux (64-bit) and MacOS (64-bit). Please open an issue online if you need further architectures."
 
     mkpath(bin_dir)
@@ -313,9 +313,24 @@ function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, Strin
                                     include_transitive_dependencies=true,
                                     include_lazy_artifacts=true,                                    
                                     pkg_comp_kwargs...)
-    @info "[Build FMU] ... compiling FMU done."
 
-    cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force=true)
+    @info "[Build FMU] ... compiling FMU done."
+    
+    # under windows the binarys are located under bin, under linux they are under lib
+    if isdir(joinpath(target_dir, "_" * fmu_name, "bin")) 
+        cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force=true)
+    end
+    if isdir(joinpath(target_dir, "_" * fmu_name, "lib"))    
+       cp(joinpath(target_dir, "_" * fmu_name, "lib"), joinpath(bin_dir); force=true)
+    end
+    
+    # linux exports the fmu-lib binary file under "libFMU_NAME.so" which is wrong, it needs to be under "FMU_NAME.so". 
+    if isfile(joinpath(bin_dir, "lib" * fmu_name * "." * libext))
+        # If there already is a file called "FMU_NAME.so" but also "libFMU_NAME.so" exists, something went wrong 
+        @assert !isfile(joinpath(bin_dir, fmu_name * "." * libext))
+        mv(joinpath(bin_dir, "lib" * fmu_name * "." * libext), joinpath(bin_dir, fmu_name * "." * libext))
+    end
+    
     cp(joinpath(target_dir, "_" * fmu_name, "share"), joinpath(bin_dir, "..", "share"); force=true)
     cp(joinpath(target_dir, "_" * fmu_name, "include"), joinpath(bin_dir, "..", "include"); force=true)
 
