@@ -13,18 +13,8 @@ using FMIBase
 #using FMICore: fmi2ModelDescriptionModelExchange, fmi2ModelDescriptionCoSimulation, fmi2VariableNamingConventionStructured
 #using FMICore: fmi2CausalityToString, fmi2VariabilityToString, fmi2InitialToString, fmi2DependencyKindToString
 
-using FMIBase.FMICore:
-    fmi2RealAttributes,
-    fmi2IntegerAttributes,
-    fmi2BooleanAttributes,
-    fmi2StringAttributes,
-    fmi2EnumerationAttributes
-using FMIBase.FMICore:
-    fmi2RealAttributesExt,
-    fmi2IntegerAttributesExt,
-    fmi2BooleanAttributesExt,
-    fmi2StringAttributesExt,
-    fmi2EnumerationAttributesExt
+using FMIBase.FMICore: fmi2RealAttributes, fmi2IntegerAttributes, fmi2BooleanAttributes, fmi2StringAttributes, fmi2EnumerationAttributes
+using FMIBase.FMICore: fmi2RealAttributesExt, fmi2IntegerAttributesExt, fmi2BooleanAttributesExt, fmi2StringAttributesExt, fmi2EnumerationAttributesExt
 
 import PackageCompiler
 import Pkg
@@ -36,15 +26,15 @@ import Dates
 export saveFMU
 
 # returns the path for a given package name (`nothing` if not installed)
-function packagePath(pkg;)
+function packagePath(pkg; )
     path = Base.find_package(pkg)
 
     if isnothing(path)
-        return nothing
+        return nothing 
     end
 
     splits = splitpath(path)
-
+    
     return joinpath(splits[1:end-2]...)
 end
 
@@ -79,20 +69,16 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
     - `suppressWarnings::Bool` an indicator wether warnings should be suppressed (default=false)
 """
-function saveFMU(
-    fmu::FMU2,
-    fmu_path::String,
-    fmu_src_file::Union{Nothing,String} = nothing;
-    standalone = true,
-    compress = true,
-    cleanup = true,
-    removeLibDependency = true,
-    removeNoExportBlocks = true,
-    resources::Union{Dict{String,String},Nothing} = nothing,
-    debug::Bool = false,
-    suppressWarnings::Bool = false,
-    pkg_comp_kwargs...,
-)
+function saveFMU(fmu::FMU2, fmu_path::String, fmu_src_file::Union{Nothing, String}=nothing; 
+    standalone=true, 
+    compress=true, 
+    cleanup=true, 
+    removeLibDependency=true,
+    removeNoExportBlocks=true,
+    resources::Union{Dict{String, String}, Nothing}=nothing,
+    debug::Bool=false,
+    suppressWarnings::Bool=false,
+    pkg_comp_kwargs...)
 
     startCompilation = time()
 
@@ -124,21 +110,17 @@ function saveFMU(
     # searching the source file ...
     if fmu_src_file == nothing
         stack = stacktrace(backtrace())
-        for i = 1:length(stack)
-            if !endswith("$(stack[i].file)", "FMIBuild.jl")
+        for i in 1:length(stack)
+            if !endswith("$(stack[i].file)", "FMIBuild.jl") 
                 fmu_src_file = "$(stack[i].file)"
                 break
             end
         end
-        @assert (fmu_src_file != nothing) [
-            "fmi2Save(...): Cannot automatically determine `fmu_src_file`, please provide manually via keyword-argument.",
-        ]
+        @assert (fmu_src_file != nothing) ["fmi2Save(...): Cannot automatically determine `fmu_src_file`, please provide manually via keyword-argument."]
         @info "[Build FMU] Automatically determined build file at: `$(fmu_src_file)`."
     end
 
-    @assert standalone == true [
-        "fmiBuild(...): Currently, only `standalone=true` is supported.",
-    ]
+    @assert standalone == true ["fmiBuild(...): Currently, only `standalone=true` is supported."]
 
     pkg_dir = "$(@__DIR__)/../template"
     (fmu_name, fmu_ext) = splitext(basename(fmu_path))
@@ -149,11 +131,11 @@ function saveFMU(
     fmu_dir = dirname(fmu_path)
 
     ### dirs 
-    target_dir = joinpath(fmu_dir)
+    target_dir = joinpath(fmu_dir) 
     # save evrything in a temporary directory
     if cleanup
-        target_dir = mktempdir(; prefix = "fmibuildjl_", cleanup = false)
-    end
+       target_dir = mktempdir(; prefix="fmibuildjl_", cleanup=false) 
+    end 
     mkpath(joinpath(target_dir, fmu_name))
     md_path = joinpath(target_dir, fmu_name, "modelDescription.xml")
 
@@ -183,13 +165,13 @@ function saveFMU(
             # pass
         end
     end
-
+    
     @assert !isnothing(libext) "fmiBuild(...): Unsupported target platform. Supporting Windows (64-, 32-bit), Linux (64-bit) and MacOS (64-bit). Please open an issue online if you need further architectures."
 
     mkpath(bin_dir)
 
-    pkg_dir = replace(pkg_dir, "\\" => "/")
-    target_dir = replace(target_dir, "\\" => "/")
+    pkg_dir = replace(pkg_dir, "\\"=>"/") 
+    target_dir = replace(target_dir, "\\"=>"/")    
 
     @info "[Build FMU] Generating package ..."
     source_pkf_dir = dirname(fmu_src_file)
@@ -199,12 +181,10 @@ function saveFMU(
         source_pkf_dir = (length(pathcomp) > 1 ? joinpath(pathcomp[1:end-1]...) : "")
         fmu_src_in_merge_dir = joinpath(pathcomp[end], fmu_src_in_merge_dir)
     end
-    @assert length(source_pkf_dir) > 0 [
-        "fmiBuild(...): Cannot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package.",
-    ]
+    @assert length(source_pkf_dir) > 0 ["fmiBuild(...): Cannot find a package where this file is stored in. For FMU-Export, this source file needs to be inside of a package."]
     merge_dir = joinpath(target_dir, "merged_" * fmu_name)
-    cp(source_pkf_dir, merge_dir; force = true)
-    chmod(target_dir, 0o777; recursive = true)
+    cp(source_pkf_dir, merge_dir; force=true)
+    chmod(target_dir, 0o777; recursive=true)
     @info "[Build FMU] Source package is $(source_pkf_dir), deployed at $(merge_dir)"
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
@@ -215,22 +195,19 @@ function saveFMU(
 
     @info "[Build FMU] ... reading FMU template file at $(fmu_res)"
     f = open(fmu_res, "r")
-    fmu_code = read(f, String)
+    fmu_code = read(f, String);
     close(f)
 
     @info "[Build FMU] ... reading old FMU source file at $(joinpath(merge_dir, fmu_src_in_merge_dir))"
     f = open(joinpath(merge_dir, fmu_src_in_merge_dir), "r")
-    cdata = read(f, String)
+    cdata = read(f, String);
     close(f)
 
     # ToDo: This will fail badly on `saveFMU(a, (b, c), d)` -> use Julia code parser
-
+    
     if removeNoExportBlocks
         @info "[Build FMU] Removing `FMIBUILD_NO_EXPORT_*` blocks ..."
-        cdata = replace(
-            cdata,
-            r"### FMIBUILD_NO_EXPORT_BEGIN ###(.|\n|\r)*### FMIBUILD_NO_EXPORT_END ###" => "",
-        )
+        cdata = replace(cdata, r"### FMIBUILD_NO_EXPORT_BEGIN ###(.|\n|\r)*### FMIBUILD_NO_EXPORT_END ###" => "")
         @info "[Build FMU] ... removed `FMIBUILD_NO_EXPORT_*` blocks."
     end
 
@@ -252,14 +229,14 @@ function saveFMU(
     defaultEnv = get(ENV, "FMIExport_DefaultEnv", nothing)
     if !isnothing(defaultEnv)
         @info "[Build FMU]    > Using default environment `$(defaultEnv)` from environment variable `FMIExport_DefaultEnv`."
-    else
+    else 
         defaultEnv = Base.active_project()
         @info "[Build FMU]    > Using active environment `$(defaultEnv)`."
     end
     Pkg.activate(defaultEnv)
     default_fmiexportPath = packagePath("FMIExport")
     default_fmibasePath = packagePath("FMIBase")
-
+    
     # adding Pkgs
     Pkg.activate(merge_dir)
 
@@ -271,13 +248,13 @@ function saveFMU(
         old_fmiexportPath = packagePath("FMIExport")
         if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
             @info "[Build FMU]    > `FMIExport` for FMU not installed, adding at `$(default_fmiexportPath)`, adding `FMIExport` from default environment."
-            Pkg.add(path = default_fmiexportPath)
+            Pkg.add(path=default_fmiexportPath)
         elseif lowercase(old_fmiexportPath) == lowercase(default_fmiexportPath) # the FMU is already using the most recent version of FMIExport.jl
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out for FMU, is `$(default_fmiexportPath)`."
         else
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(default_fmiexportPath)` for FMU ."
-            Pkg.add(path = default_fmiexportPath)
-        end
+            Pkg.add(path=default_fmiexportPath)
+        end   
     end
 
     # FMIBase.jl
@@ -288,13 +265,13 @@ function saveFMU(
         old_fmibasePath = packagePath("FMIBase")
         if isnothing(old_fmibasePath)
             @info "[Build FMU]    > `FMIBase` not installed, adding at `$(default_fmibasePath)`, adding `FMIBase` from default environment."
-            Pkg.add(path = default_fmibasePath)
+            Pkg.add(path=default_fmibasePath)
         elseif lowercase(old_fmibasePath) == lowercase(default_fmibasePath)
             @info "[Build FMU]    > Most recent version (as in default environment) of `FMIBase` already checked out, is `$(default_fmibasePath)`."
         else
             @info "[Build FMU]    > Replacing `FMIBase` at `$(old_fmibasePath)` with the default environment installation at `$(default_fmibasePath)`."
-            Pkg.add(path = default_fmibasePath)
-        end
+            Pkg.add(path=default_fmibasePath)
+        end    
     end
 
     if removeLibDependency
@@ -310,85 +287,58 @@ function saveFMU(
     Pkg.activate(currentEnv)
     ENV["JULIA_PKG_PRECOMPILE_AUTO"] = currentCompState
     @info "[Build FMU] ... adding/removing dependencies done."
-
+    
     @info "[Build FMU] ... generating new FMU source file at $(joinpath(merge_dir, fmu_src_in_merge_dir))"
-
+    
     f = open(joinpath(merge_dir, fmu_src_in_merge_dir), "w")
     assertline = "" # "\n@assert FMIBUILD_FMU != nothing \"`FMIBUILD_FMU = nothing`, did you forget to mark the FMU instance to export with `FMIBUILD_FMU = myFMUInstance`?\"\n"
 
     cdata_start = "" # "\nBase.@ccallable function init_FMU()::Cvoid\n"
     cdata_end = "" # "\nnothing\nend\n"
-    write(
-        f,
-        "module " *
-        fmu_name *
-        "\n" *
-        fmu_code *
-        cdata_start *
-        cdata *
-        cdata_end *
-        assertline *
-        "\nend",
-    )
+    write(f, "module " * fmu_name * "\n" * fmu_code * cdata_start * cdata * cdata_end * assertline * "\nend");
     close(f)
 
     @info "[Build FMU] ... generating package done."
 
     @info "[Build FMU] Compiling FMU ..."
-    PackageCompiler.create_library(
-        merge_dir,
-        joinpath(target_dir, "_" * fmu_name);
-        lib_name = fmu_name,
-        precompile_execution_file = [joinpath(merge_dir, fmu_src_in_merge_dir)], # "$(@__DIR__)/../template/ME/precompile/FMU2_generate.jl"
-        precompile_statements_file = [
-            "$(@__DIR__)/../template/ME/precompile/FMU2_additional.jl",
-        ],
-        incremental = false,
-        filter_stdlibs = false,
-        julia_init_c_file = "$(@__DIR__)/../template/ME/header/FMU2_init.c",
-        header_files = ["$(@__DIR__)/../template/ME/header/FMU2_init.h"],
-        force = true,
-        include_transitive_dependencies = true,
-        include_lazy_artifacts = true,
-        pkg_comp_kwargs...,
-    )
+    PackageCompiler.create_library(merge_dir, joinpath(target_dir, "_" * fmu_name);
+                                    lib_name=fmu_name,
+                                    precompile_execution_file=[joinpath(merge_dir, fmu_src_in_merge_dir)], # "$(@__DIR__)/../template/ME/precompile/FMU2_generate.jl"
+                                    precompile_statements_file=["$(@__DIR__)/../template/ME/precompile/FMU2_additional.jl"],
+                                    incremental=false,
+                                    filter_stdlibs=false,
+                                    julia_init_c_file = "$(@__DIR__)/../template/ME/header/FMU2_init.c",
+                                    header_files = ["$(@__DIR__)/../template/ME/header/FMU2_init.h"], 
+                                    force=true,
+                                    include_transitive_dependencies=true,
+                                    include_lazy_artifacts=true,                                    
+                                    pkg_comp_kwargs...)
 
     @info "[Build FMU] ... compiling FMU done."
-
+    
     # under windows the binarys are located under bin, under linux they are under lib
-    if isdir(joinpath(target_dir, "_" * fmu_name, "bin"))
-        cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force = true)
+    if isdir(joinpath(target_dir, "_" * fmu_name, "bin")) 
+        cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force=true)
     end
-    if isdir(joinpath(target_dir, "_" * fmu_name, "lib"))
-        cp(joinpath(target_dir, "_" * fmu_name, "lib"), joinpath(bin_dir); force = true)
+    if isdir(joinpath(target_dir, "_" * fmu_name, "lib"))    
+       cp(joinpath(target_dir, "_" * fmu_name, "lib"), joinpath(bin_dir); force=true)
     end
-
+    
     # linux exports the fmu-lib binary file under "libFMU_NAME.so" which is wrong, it needs to be under "FMU_NAME.so". 
     if isfile(joinpath(bin_dir, "lib" * fmu_name * "." * libext))
         # If there already is a file called "FMU_NAME.so" but also "libFMU_NAME.so" exists, something went wrong 
         @assert !isfile(joinpath(bin_dir, fmu_name * "." * libext))
-        mv(
-            joinpath(bin_dir, "lib" * fmu_name * "." * libext),
-            joinpath(bin_dir, fmu_name * "." * libext),
-        )
+        mv(joinpath(bin_dir, "lib" * fmu_name * "." * libext), joinpath(bin_dir, fmu_name * "." * libext))
     end
+    
+    cp(joinpath(target_dir, "_" * fmu_name, "share"), joinpath(bin_dir, "..", "share"); force=true)
+    cp(joinpath(target_dir, "_" * fmu_name, "include"), joinpath(bin_dir, "..", "include"); force=true)
 
-    cp(
-        joinpath(target_dir, "_" * fmu_name, "share"),
-        joinpath(bin_dir, "..", "share");
-        force = true,
-    )
-    cp(
-        joinpath(target_dir, "_" * fmu_name, "include"),
-        joinpath(bin_dir, "..", "include");
-        force = true,
-    )
-
-    if resources != nothing
+    if resources != nothing 
         @info "[Build FMU] Adding resource files ..."
         mkdir(joinpath(bin_dir, "..", "..", "resources"))
         for (key, val) in resources
-            cp(key, joinpath(bin_dir, "..", "..", "resources", val); force = true)
+            cp(key, joinpath(bin_dir, "..", "..", "resources", val); force=true)
             @info "[Build FMU] \t $val"
         end
         @info "[Build FMU] ... adding resource files done."
@@ -408,7 +358,7 @@ function saveFMU(
     # parse and zip directories
     @info "[Build FMU] Zipping FMU ..."
     zipfile = joinpath(target_dir, fmu_name * ".zip")
-    zdir = ZipFile.Writer(zipfile)
+    zdir = ZipFile.Writer(zipfile) 
     for (root, dirs, files) in walkdir(joinpath(target_dir, fmu_name))
         for file in files
             filepath = joinpath(root, file)
@@ -418,35 +368,27 @@ function saveFMU(
 
             zippath = subtractPath(filepath, joinpath(target_dir, fmu_name) * "/")
             println("\t$(zippath)")
-            zf = ZipFile.addfile(
-                zdir,
-                zippath;
-                method = (compress ? ZipFile.Deflate : ZipFile.Store),
-            )
+            zf = ZipFile.addfile(zdir, zippath; method=(compress ? ZipFile.Deflate : ZipFile.Store));
             write(zf, content)
         end
     end
     close(zdir)
 
     # Rename ZIP-file to FMU-file
-    cp(
-        joinpath(target_dir, fmu_name * ".zip"),
-        joinpath(fmu_dir, fmu_name * ".fmu");
-        force = true,
-    )
+    cp(joinpath(target_dir, fmu_name * ".zip"), joinpath(fmu_dir, fmu_name * ".fmu"); force=true) 
     @info "[Build FMU] ... zipping FMU done."
 
     if cleanup
         @info "[Build FMU] Clean up ..."
         # ToDo: Clean-up is done by saving in a temporary directory (which may be deleted by the OS) 
         @info "[Build FMU] ... clean up done."
-    end
+    end 
 
     stopPacking = time()
 
     # output message 
-    dt = stopPacking - startCompilation
-    per = (stopPacking - startPacking) / dt * 100.0
+    dt = stopPacking-startCompilation
+    per = (stopPacking-startPacking) / dt * 100.0
     mins = 0
     secs = round(Integer, dt)
     while secs >= 60
@@ -461,17 +403,17 @@ end
 
 # removes all leading elements of pathA that fit pathB 
 function subtractPath(pathA::String, pathB::String)
-    pathA = replace(pathA, "\\" => "/")
-    pathB = replace(pathB, "\\" => "/")
+    pathA = replace(pathA, "\\"=>"/") 
+    pathB = replace(pathB, "\\"=>"/") 
 
     if length(pathA) <= 0 || length(pathB) <= 0
-        return pathA
+        return pathA 
     end
 
     while (length(pathA) > 0 && length(pathB) > 0) && (pathA[1] == pathB[1])
         pathA = pathA[2:end]
         pathB = pathB[2:end]
-    end
+    end 
 
     return pathA
 end
@@ -480,21 +422,21 @@ end
 # based on: https://github.com/JuliaLang/PackageCompiler.jl/issues/658
 # patches the compiled DLL, so the lib does not have "bad" relative paths like "../bin/", where "bin" is the directory of the DLL itself
 function patchJuliaLib(libjulia_path)
-
+    
     if !isfile(libjulia_path)
         error("Unable to open libjulia.* at $(libjulia_path)")
     end
-
-    open(libjulia_path, read = true, write = true) do io
+    
+    open(libjulia_path, read=true, write=true) do io
         # Search for `../bin/` string:
         needle = "../bin/"
         readuntil(io, needle)
         skip(io, -length(needle))
         libpath_offset = position(io)
-
+    
         libpath = split(String(readuntil(io, UInt8(0))), ":")
         @info("Found embedded libpath", libpath, libpath_offset)
-
+    
         # Get rid of `../bin/` prefix:
         libpath = map(libpath) do l
             if startswith(l, "../bin/")
@@ -505,9 +447,9 @@ function patchJuliaLib(libjulia_path)
                 return l
             end
         end
-
+    
         @info("Filtered libpath", libpath)
-
+    
         # Write filtered libpath out to the file, terminate with NULL.
         seek(io, libpath_offset)
         write(io, join(libpath, ":"))
@@ -521,11 +463,11 @@ function dependencyString(dependencies::AbstractArray)
     end
 
     if length(dependencies) <= 0
-        return ""
+        return "" 
     end
 
     depStr = "$(dependencies[1])"
-    for d = 2:length(dependencies)
+    for d in 2:length(dependencies)
         depStr *= " $(dependencies[d])"
     end
 
@@ -538,18 +480,18 @@ function dependencyKindString(dependencies::AbstractArray)
     end
 
     if length(dependencies) <= 0
-        return ""
+        return "" 
     end
 
     depStr = "$(dependencyKindToString(md, dependencies[1]))"
-    for d = 2:length(dependencies)
+    for d in 2:length(dependencies)
         depStr *= " $(dependencyKindToString(md, dependencies[d]))"
     end
 
     return depStr
 end
 
-function addFieldsAsAttributes(md, node, _struct, skiplist = ())
+function addFieldsAsAttributes(md, node, _struct, skiplist=())
     for field in fieldnames(typeof(_struct))
         if field ∉ skiplist
 
@@ -560,7 +502,7 @@ function addFieldsAsAttributes(md, node, _struct, skiplist = ())
             value = getfield(_struct, field)
 
             if isnothing(value)
-                continue
+               continue
             end
 
             # special formatters
@@ -579,20 +521,20 @@ function addFieldsAsAttributes(md, node, _struct, skiplist = ())
             elseif field == :dependencies
 
                 if length(value) <= 0
-                    return ""
+                    return "" 
                 end
                 depStr = "$(value[1])"
-                for d = 2:length(value)
+                for d in 2:length(value)
                     depStr *= " $(value[d])"
                 end
                 value = depStr
             elseif field == :dependenciesKind
 
                 if length(value) <= 0
-                    return ""
+                    return "" 
                 end
                 depStr = "$(dependencyKindToString(md, value[1]))"
-                for d = 2:length(value)
+                for d in 2:length(value)
                     depStr *= " $(dependencyKindToString(md, value[d]))"
                 end
                 value = depStr
@@ -605,8 +547,8 @@ end
 
 function saveModelDescription(md::fmi2ModelDescription, file_path::String)
     doc = XMLDocument()
-
-    doc_root = ElementNode("fmiModelDescription")
+    
+    doc_root = ElementNode("fmiModelDescription") 
     setroot!(doc, doc_root)
     link!(doc_root, AttributeNode("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"))
 
@@ -616,45 +558,23 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
     link!(doc_root, AttributeNode("guid", "$(md.guid)"))
 
     # optional
-    link!(
-        doc_root,
-        AttributeNode(
-            "generationTool",
-            "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
-        ),
-    )
+    link!(doc_root, AttributeNode("generationTool", "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons"))
     if md.generationDateAndTime != nothing
         dateTimeString = ""
         if isa(md.generationDateAndTime, Dates.DateTime)
-            dateTimeString =
-                Dates.format(md.generationDateAndTime, "yyyy-mm-dd") *
-                "T" *
-                Dates.format(md.generationDateAndTime, "HH:MM:SS") *
-                "Z"
+            dateTimeString = Dates.format(md.generationDateAndTime, "yyyy-mm-dd") * "T" * Dates.format(md.generationDateAndTime, "HH:MM:SS") * "Z" 
         elseif isa(md.generationDateAndTime, String)
             dateTimeString = md.generationDateAndTime
-        else
+        else 
             @warn "saveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(md.generationDateAndTime)` (typeof `$(typeof(md.generationDateAndTime))`)."
         end
         link!(doc_root, AttributeNode("generationDateAndTime", dateTimeString))
     end
     if !isnothing(md.variableNamingConvention)
-        link!(
-            doc_root,
-            AttributeNode(
-                "variableNamingConvention",
-                (
-                    md.variableNamingConvention == fmi2VariableNamingConventionStructured ?
-                    "structured" : "flat"
-                ),
-            ),
-        )
+        link!(doc_root, AttributeNode("variableNamingConvention", (md.variableNamingConvention == fmi2VariableNamingConventionStructured ? "structured" : "flat")))
     end
     if !isnothing(md.numberOfEventIndicators)
-        link!(
-            doc_root,
-            AttributeNode("numberOfEventIndicators", "$(md.numberOfEventIndicators)"),
-        )
+        link!(doc_root, AttributeNode("numberOfEventIndicators", "$(md.numberOfEventIndicators)"))
     end
 
     if !isnothing(md.modelExchange)
@@ -700,7 +620,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
                 addFieldsAsAttributes(md, tn, typdef.attribute, (:items,))
                 link!(st, tn)
 
-                for j = 1:length(typdef.attribute)
+                for j in 1:length(typdef.attribute)
                     itemNode = ElementNode("Item")
                     addFieldsAsAttributes(md, itemNode, typdef.attribute[j])
                     link!(tn, itemNode)
@@ -714,7 +634,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
 
     mv = ElementNode("ModelVariables")
     link!(doc_root, mv)
-    for i = 1:length(md.modelVariables)
+    for i in 1:length(md.modelVariables)
         link!(mv, CommentNode("Index=$(i)"))
 
         sv = md.modelVariables[i]
@@ -768,7 +688,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
         outs = ElementNode("Outputs")
         link!(ms, outs)
 
-        for i = 1:length(md.modelStructure.outputs)
+        for i in 1:length(md.modelStructure.outputs)
             uk = md.modelStructure.outputs[i]
 
             uk_node = ElementNode("Unknown")
@@ -781,7 +701,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
         ders = ElementNode("Derivatives")
         link!(ms, ders)
 
-        for i = 1:length(md.modelStructure.derivatives)
+        for i in 1:length(md.modelStructure.derivatives)
             uk = md.modelStructure.derivatives[i]
 
             uk_node = ElementNode("Unknown")
@@ -794,7 +714,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
         inis = ElementNode("InitialUnknowns")
         link!(ms, inis)
 
-        for i = 1:length(md.modelStructure.initialUnknowns)
+        for i in 1:length(md.modelStructure.initialUnknowns)
             uk = md.modelStructure.initialUnknowns[i]
 
             uk_node = ElementNode("Unknown")
@@ -802,7 +722,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
             link!(inis, uk_node)
         end
     end
-
+    
     # save modelDescription (with linebreaks)
     f = open(file_path, "w")
     prettyprint(f, doc)
