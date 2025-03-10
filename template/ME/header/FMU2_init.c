@@ -152,13 +152,10 @@ static void Initializer(int argc, char** argv, char** envp)
     char pid[20];
     char path[PATH_MAX + 1] = {0};
 
-    // Hole die Prozess-ID und baue den Pfad zur Exe-Datei
     sprintf(pid, "/proc/%d/exe", getpid());
     readlink(pid, path, sizeof(path));
 
-    // Da 'constructor' erwartet einen 'short unsigned int*', musst du den richtigen Typ verwenden
-    // Hier könnte eine Umwandlung des Pfads erforderlich sein, aber das hängt von der Funktionsdefinition ab
-    constructor((short unsigned int*)path);  // Wenn path als short unsigned int erwartet wird
+    constructor((short unsigned int*)path); 
 }
 
 __attribute__((destructor))
