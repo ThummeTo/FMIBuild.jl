@@ -4,8 +4,23 @@
 #
 
 using FMIBase.FMICore
-using FMIBase.FMICore: fmi2CallbackFunctions, fmi2Component, fmi2ComponentEnvironment, fmi2EventInfo, fmi2ValueReference
-using FMIBase.FMICore: fmi2Real, fmi2Integer, fmi2Boolean, fmi2String, fmi2True, fmi2False, fmi2StatusOK, fmi2StatusWarning, fmi2StatusError, fmi2StatusFatal
+using FMIBase.FMICore:
+    fmi2CallbackFunctions,
+    fmi2Component,
+    fmi2ComponentEnvironment,
+    fmi2EventInfo,
+    fmi2ValueReference
+using FMIBase.FMICore:
+    fmi2Real,
+    fmi2Integer,
+    fmi2Boolean,
+    fmi2String,
+    fmi2True,
+    fmi2False,
+    fmi2StatusOK,
+    fmi2StatusWarning,
+    fmi2StatusError,
+    fmi2StatusFatal
 using FMIBase.FMICore: fmi2Status, fmi2Type
 import FMIBase: logInfo, logWarning, logError, FMU2Component, statusToString
 
@@ -30,17 +45,21 @@ function dereferenceInstance(address::fmi2Component)
     return nothing
 end
 
-function logInfo(_component::fmi2Component, message, status::fmi2Status=fmi2StatusOK)
+function logInfo(_component::fmi2Component, message, status::fmi2Status = fmi2StatusOK)
     component = dereferenceInstance(_component)
     logInfo(component, message, status)
 end
 
-function logWarning(_component::fmi2Component, message, status::fmi2Status=fmi2StatusWarning)
+function logWarning(
+    _component::fmi2Component,
+    message,
+    status::fmi2Status = fmi2StatusWarning,
+)
     component = dereferenceInstance(_component)
     logWarning(component, message, status)
 end
 
-function logError(_component::fmi2Component, message, status::fmi2Status=fmi2StatusError)
+function logError(_component::fmi2Component, message, status::fmi2Status = fmi2StatusError)
     component = dereferenceInstance(_component)
     logError(component, message, status)
 end
@@ -74,24 +93,41 @@ Base.@ccallable function fmi2GetVersion()::fmi2String
 end
 
 # 2.1.5
-Base.@ccallable function fmi2Instantiate(_instanceName::fmi2String,
-                                         fmuType::fmi2Type,
-                                         _fmuGUID::fmi2String,
-                                         _fmuResourceLocation::fmi2String,
-                                         _functions::Ptr{fmi2CallbackFunctions},
-                                         visible::fmi2Boolean,
-                                         loggingOn::fmi2Boolean)::fmi2Component
-    
+Base.@ccallable function fmi2Instantiate(
+    _instanceName::fmi2String,
+    fmuType::fmi2Type,
+    _fmuGUID::fmi2String,
+    _fmuResourceLocation::fmi2String,
+    _functions::Ptr{fmi2CallbackFunctions},
+    visible::fmi2Boolean,
+    loggingOn::fmi2Boolean,
+)::fmi2Component
+
     _component = C_NULL
     try
-        _component = FMICore.fmi2Instantiate(FMIBUILD_FMU.cInstantiate, _instanceName, fmuType, _fmuGUID, _fmuResourceLocation, _functions, visible, loggingOn)
+        _component = FMICore.fmi2Instantiate(
+            FMIBUILD_FMU.cInstantiate,
+            _instanceName,
+            fmuType,
+            _fmuGUID,
+            _fmuResourceLocation,
+            _functions,
+            visible,
+            loggingOn,
+        )
 
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2Instantiate($(_instanceName), $(fmuType), $(_fmuGUID), $(_fmuResourceLocation), $(_functions), $(visible), $(loggingOn))\n\t-> $(_component)")
+            logInfo(
+                _component,
+                "fmi2Instantiate($(_instanceName), $(fmuType), $(_fmuGUID), $(_fmuResourceLocation), $(_functions), $(visible), $(loggingOn))\n\t-> $(_component)",
+            )
         end
     catch e
 
-        logError(_component, "Exception thrown:\tIn function: fmi2Instantiate($(_instanceName), $(fmuType), $(_fmuGUID), $(_fmuResourceLocation), $(_functions), $(visible), $(loggingOn))\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: fmi2Instantiate($(_instanceName), $(fmuType), $(_fmuGUID), $(_fmuResourceLocation), $(_functions), $(visible), $(loggingOn))\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
@@ -110,7 +146,10 @@ Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
             logInfo(_component, "\t-> [NOTHING]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: fmi2FreeInstance($(_component))\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: fmi2FreeInstance($(_component))\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
@@ -119,88 +158,138 @@ Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
     return nothing
 end
 
-Base.@ccallable function fmi2SetDebugLogging(_component::fmi2Component, loggingOn::fmi2Boolean, nCategories::Csize_t, categories::Ptr{fmi2String})::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetDebugLogging(
+    _component::fmi2Component,
+    loggingOn::fmi2Boolean,
+    nCategories::Csize_t,
+    categories::Ptr{fmi2String},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2SetDebugLogging($(_component), $(loggingOn), $(nCategories), $(categories))")
+            logInfo(
+                _component,
+                "fmi2SetDebugLogging($(_component), $(loggingOn), $(nCategories), $(categories))",
+            )
         end
-        status = FMICore.fmi2SetDebugLogging(FMIBUILD_FMU.cSetDebugLogging, _component, loggingOn, nCategories, categories)
+        status = FMICore.fmi2SetDebugLogging(
+            FMIBUILD_FMU.cSetDebugLogging,
+            _component,
+            loggingOn,
+            nCategories,
+            categories,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetupExperiment(_component::fmi2Component, toleranceDefined::fmi2Boolean, tolerance::fmi2Real, startTime::fmi2Real, stopTimeDefined::fmi2Boolean, stopTime::fmi2Real)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetupExperiment(
+    _component::fmi2Component,
+    toleranceDefined::fmi2Boolean,
+    tolerance::fmi2Real,
+    startTime::fmi2Real,
+    stopTimeDefined::fmi2Boolean,
+    stopTime::fmi2Real,
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2SetupExperiment($(_component), $(toleranceDefined), $(tolerance), $(startTime), $(stopTimeDefined), $(stopTime))")
+            logInfo(
+                _component,
+                "fmi2SetupExperiment($(_component), $(toleranceDefined), $(tolerance), $(startTime), $(stopTimeDefined), $(stopTime))",
+            )
         end
-        status = FMICore.fmi2SetupExperiment(FMIBUILD_FMU.cSetupExperiment, _component, toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime)
+        status = FMICore.fmi2SetupExperiment(
+            FMIBUILD_FMU.cSetupExperiment,
+            _component,
+            toleranceDefined,
+            tolerance,
+            startTime,
+            stopTimeDefined,
+            stopTime,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2EnterInitializationMode($(_component))")
         end
-        status = FMICore.fmi2EnterInitializationMode(FMIBUILD_FMU.cEnterInitializationMode, _component)
+        status = FMICore.fmi2EnterInitializationMode(
+            FMIBUILD_FMU.cEnterInitializationMode,
+            _component,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2ExitInitializationMode($(_component))")
         end
-        status = FMICore.fmi2ExitInitializationMode(FMIBUILD_FMU.cExitInitializationMode, _component)
+        status = FMICore.fmi2ExitInitializationMode(
+            FMIBUILD_FMU.cExitInitializationMode,
+            _component,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2Terminate($(_component))")
@@ -210,16 +299,19 @@ Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status 
+Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -229,8 +321,11 @@ Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
-    catch e 
-        logError(_component, "Exception thrown:\tIn function: fmi2Reset($(_component))\n\tMessage: $(e)\n\tStack:")
+    catch e
+        logError(
+            _component,
+            "Exception thrown:\tIn function: fmi2Reset($(_component))\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
@@ -238,7 +333,12 @@ Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
     return status
 end
 
-Base.@ccallable function fmi2GetReal(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Real})::fmi2Status 
+Base.@ccallable function fmi2GetReal(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Real},
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -248,8 +348,11 @@ Base.@ccallable function fmi2GetReal(_component::fmi2Component, _vr::Ptr{fmi2Val
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
-    catch e 
-        logError(_component, "Exception thrown:\tIn function: fmi2GetReal($(_component), $(_vr), $(nvr), $(_value))\n\tMessage: $(e)\n\tStack:")
+    catch e
+        logError(
+            _component,
+            "Exception thrown:\tIn function: fmi2GetReal($(_component), $(_vr), $(nvr), $(_value))\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
@@ -257,68 +360,100 @@ Base.@ccallable function fmi2GetReal(_component::fmi2Component, _vr::Ptr{fmi2Val
     return status
 end
 
-Base.@ccallable function fmi2GetInteger(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Integer})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetInteger(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Integer},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2GetInteger($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2GetInteger!(FMIBUILD_FMU.cGetInteger, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2GetInteger!(FMIBUILD_FMU.cGetInteger, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetBoolean(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Boolean})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetBoolean(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Boolean},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2GetBoolean($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2GetBoolean!(FMIBUILD_FMU.cGetBoolean, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2GetBoolean!(FMIBUILD_FMU.cGetBoolean, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetString(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2String})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetString(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2String},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2GetString($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2GetString!(FMIBUILD_FMU.cGetString, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2GetString!(FMIBUILD_FMU.cGetString, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetReal(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Real})::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetReal(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Real},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetReal($(_component), $(_vr), $(nvr), $(_value))")
@@ -328,77 +463,107 @@ Base.@ccallable function fmi2SetReal(_component::fmi2Component, _vr::Ptr{fmi2Val
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetInteger(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Integer})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetInteger(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Integer},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetInteger($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2SetInteger(FMIBUILD_FMU.cSetInteger, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2SetInteger(FMIBUILD_FMU.cSetInteger, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetBoolean(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2Boolean})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetBoolean(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2Boolean},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetBoolean($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2SetBoolean(FMIBUILD_FMU.cSetBoolean, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2SetBoolean(FMIBUILD_FMU.cSetBoolean, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetString(_component::fmi2Component, _vr::Ptr{fmi2ValueReference}, nvr::Csize_t, _value::Ptr{fmi2String})::fmi2Status
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetString(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _value::Ptr{fmi2String},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetString($(_component), $(_vr), $(nvr), $(_value))")
         end
-        status = FMICore.fmi2SetString(FMIBUILD_FMU.cSetString, _component, _vr, nvr, _value)
+        status =
+            FMICore.fmi2SetString(FMIBUILD_FMU.cSetString, _component, _vr, nvr, _value)
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetTime($(_component), $(time))")
@@ -408,37 +573,52 @@ Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real):
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2SetContinuousStates(_component::fmi2Component, _x::Ptr{fmi2Real}, nx::Csize_t)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2SetContinuousStates(
+    _component::fmi2Component,
+    _x::Ptr{fmi2Real},
+    nx::Csize_t,
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2SetContinuousStates($(_component), $(_x), $(nx))")
         end
-        status = FMICore.fmi2SetContinuousStates(FMIBUILD_FMU.cSetContinuousStates, _component, _x, nx)
+        status = FMICore.fmi2SetContinuousStates(
+            FMIBUILD_FMU.cSetContinuousStates,
+            _component,
+            _x,
+            nx,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2EnterEventMode($(_component))")
@@ -448,151 +628,241 @@ Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Stat
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2NewDiscreteStates(_component::fmi2Component, _fmi2eventInfo::Ptr{fmi2EventInfo})::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2NewDiscreteStates(
+    _component::fmi2Component,
+    _fmi2eventInfo::Ptr{fmi2EventInfo},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2NewDiscreteStates($(_component), $(_fmi2eventInfo))")
         end
-        status = FMICore.fmi2NewDiscreteStates!(FMIBUILD_FMU.cNewDiscreteStates, _component, _fmi2eventInfo)
+        status = FMICore.fmi2NewDiscreteStates!(
+            FMIBUILD_FMU.cNewDiscreteStates,
+            _component,
+            _fmi2eventInfo,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2EnterContinuousTimeMode($(_component))")
         end
-        status = FMICore.fmi2EnterContinuousTimeMode(FMIBUILD_FMU.cEnterContinuousTimeMode, _component)
+        status = FMICore.fmi2EnterContinuousTimeMode(
+            FMIBUILD_FMU.cEnterContinuousTimeMode,
+            _component,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2CompletedIntegratorStep(_component::fmi2Component, noSetFMUStatePriorToCurrentPoint::fmi2Boolean, enterEventMode::Ptr{fmi2Boolean}, terminateSimulation::Ptr{fmi2Boolean})::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2CompletedIntegratorStep(
+    _component::fmi2Component,
+    noSetFMUStatePriorToCurrentPoint::fmi2Boolean,
+    enterEventMode::Ptr{fmi2Boolean},
+    terminateSimulation::Ptr{fmi2Boolean},
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2CompletedIntegratorStep($(_component), $(noSetFMUStatePriorToCurrentPoint), $(enterEventMode), $(terminateSimulation))")
+            logInfo(
+                _component,
+                "fmi2CompletedIntegratorStep($(_component), $(noSetFMUStatePriorToCurrentPoint), $(enterEventMode), $(terminateSimulation))",
+            )
         end
-        status = FMICore.fmi2CompletedIntegratorStep!(FMIBUILD_FMU.cCompletedIntegratorStep, _component, noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation)
+        status = FMICore.fmi2CompletedIntegratorStep!(
+            FMIBUILD_FMU.cCompletedIntegratorStep,
+            _component,
+            noSetFMUStatePriorToCurrentPoint,
+            enterEventMode,
+            terminateSimulation,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetDerivatives(_component::fmi2Component, _derivatives::Ptr{fmi2Real}, nx::Csize_t)::fmi2Status 
+Base.@ccallable function fmi2GetDerivatives(
+    _component::fmi2Component,
+    _derivatives::Ptr{fmi2Real},
+    nx::Csize_t,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2GetDerivatives($(_component), $(_derivatives), $(nx))")
         end
-        status = FMICore.fmi2GetDerivatives!(FMIBUILD_FMU.cGetDerivatives, _component, _derivatives, nx)
+        status = FMICore.fmi2GetDerivatives!(
+            FMIBUILD_FMU.cGetDerivatives,
+            _component,
+            _derivatives,
+            nx,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: fmi2GetDerivatives($(_component), $(_derivatives), $(nx))\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: fmi2GetDerivatives($(_component), $(_derivatives), $(nx))\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetEventIndicators(_component::fmi2Component, _eventIndicators::Ptr{fmi2Real}, ni::Csize_t)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetEventIndicators(
+    _component::fmi2Component,
+    _eventIndicators::Ptr{fmi2Real},
+    ni::Csize_t,
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2GetEventIndicators($(_component), $(_eventIndicators), $(ni))")
+            logInfo(
+                _component,
+                "fmi2GetEventIndicators($(_component), $(_eventIndicators), $(ni))",
+            )
         end
-        status = FMICore.fmi2GetEventIndicators!(FMIBUILD_FMU.cGetEventIndicators, _component, _eventIndicators, ni)
+        status = FMICore.fmi2GetEventIndicators!(
+            FMIBUILD_FMU.cGetEventIndicators,
+            _component,
+            _eventIndicators,
+            ni,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetContinuousStates(_component::fmi2Component, _x::Ptr{fmi2Real}, nx::Csize_t)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetContinuousStates(
+    _component::fmi2Component,
+    _x::Ptr{fmi2Real},
+    nx::Csize_t,
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2GetContinuousStates($(_component), $(_x), $(nx))")
         end
-        status = FMICore.fmi2GetContinuousStates!(FMIBUILD_FMU.cGetContinuousStates, _component, _x, nx)
+        status = FMICore.fmi2GetContinuousStates!(
+            FMIBUILD_FMU.cGetContinuousStates,
+            _component,
+            _x,
+            nx,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
 
-Base.@ccallable function fmi2GetNominalsOfContinuousStates(_component::fmi2Component, _x_nominal::Ptr{fmi2Real}, nx::Csize_t)::fmi2Status 
-    status = fmi2StatusError 
+Base.@ccallable function fmi2GetNominalsOfContinuousStates(
+    _component::fmi2Component,
+    _x_nominal::Ptr{fmi2Real},
+    nx::Csize_t,
+)::fmi2Status
+    status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
-            logInfo(_component, "fmi2GetNominalsOfContinuousStates($(_component), $(_x_nominal), $(nx))")
+            logInfo(
+                _component,
+                "fmi2GetNominalsOfContinuousStates($(_component), $(_x_nominal), $(nx))",
+            )
         end
-        status = FMICore.fmi2GetNominalsOfContinuousStates!(FMIBUILD_FMU.cGetNominalsOfContinuousStates, _component, _x_nominal, nx)
+        status = FMICore.fmi2GetNominalsOfContinuousStates!(
+            FMIBUILD_FMU.cGetNominalsOfContinuousStates,
+            _component,
+            _x_nominal,
+            nx,
+        )
         if FMIBUILD_LOGGING
             logInfo(_component, "\t-> $(status) [$(statusToString(status))]")
         end
     catch e
-        logError(_component, "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:")
+        logError(
+            _component,
+            "Exception thrown:\tIn function: ...\n\tMessage: $(e)\n\tStack:",
+        )
         for s in stacktrace()
             logError(_component, "$(s)")
         end
     end
-    
+
     return status
 end
