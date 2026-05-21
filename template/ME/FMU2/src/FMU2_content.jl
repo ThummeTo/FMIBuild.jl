@@ -45,7 +45,7 @@ function dereferenceInstance(address::fmi2Component)
     return nothing
 end
 
-function logInfo(_component::fmi2Component, message, status::fmi2Status = fmi2StatusOK)
+function logInfo(_component::fmi2Component, message, status::fmi2Status=fmi2StatusOK)
     component = dereferenceInstance(_component)
     logInfo(component, message, status)
 end
@@ -53,13 +53,13 @@ end
 function logWarning(
     _component::fmi2Component,
     message,
-    status::fmi2Status = fmi2StatusWarning,
+    status::fmi2Status=fmi2StatusWarning,
 )
     component = dereferenceInstance(_component)
     logWarning(component, message, status)
 end
 
-function logError(_component::fmi2Component, message, status::fmi2Status = fmi2StatusError)
+function logError(_component::fmi2Component, message, status::fmi2Status=fmi2StatusError)
     component = dereferenceInstance(_component)
     logError(component, message, status)
 end
