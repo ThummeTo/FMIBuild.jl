@@ -64,10 +64,10 @@ function logError(_component::fmi2Component, message, status::fmi2Status = fmi2S
     logError(component, message, status)
 end
 
-Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
+Base.@ccallable function jl_init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     dllLoc = unsafe_string(_dllLoc)
     comps = splitpath(dllLoc)
-    resLoc = joinpath(comps[1:end-3]..., "resources")
+    resLoc = joinpath(comps[1:(end-3)]..., "resources")
 
     @info "init_FMU(...)\nDLL location: $(dllLoc)\nResources location: $(resLoc)"
 
@@ -84,16 +84,16 @@ Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
 end
 
 # 2.1.4
-Base.@ccallable function fmi2GetTypesPlatform()::fmi2String
+Base.@ccallable function jl_fmi2GetTypesPlatform()::fmi2String
     return FMICore.fmi2GetTypesPlatform(FMIBUILD_FMU.cGetTypesPlatform)
 end
 
-Base.@ccallable function fmi2GetVersion()::fmi2String
+Base.@ccallable function jl_fmi2GetVersion()::fmi2String
     return FMICore.fmi2GetVersion(FMIBUILD_FMU.cGetVersion)
 end
 
 # 2.1.5
-Base.@ccallable function fmi2Instantiate(
+Base.@ccallable function jl_fmi2Instantiate(
     _instanceName::fmi2String,
     fmuType::fmi2Type,
     _fmuGUID::fmi2String,
@@ -136,7 +136,7 @@ Base.@ccallable function fmi2Instantiate(
     return _component
 end
 
-Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
+Base.@ccallable function jl_fmi2FreeInstance(_component::fmi2Component)::Cvoid
     try
         if FMIBUILD_LOGGING
             logInfo(_component, "fmi2FreeInstance($(_component))")
@@ -158,7 +158,7 @@ Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
     return nothing
 end
 
-Base.@ccallable function fmi2SetDebugLogging(
+Base.@ccallable function jl_fmi2SetDebugLogging(
     _component::fmi2Component,
     loggingOn::fmi2Boolean,
     nCategories::Csize_t,
@@ -195,7 +195,7 @@ Base.@ccallable function fmi2SetDebugLogging(
     return status
 end
 
-Base.@ccallable function fmi2SetupExperiment(
+Base.@ccallable function jl_fmi2SetupExperiment(
     _component::fmi2Component,
     toleranceDefined::fmi2Boolean,
     tolerance::fmi2Real,
@@ -236,7 +236,9 @@ Base.@ccallable function fmi2SetupExperiment(
     return status
 end
 
-Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterInitializationMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -262,7 +264,9 @@ Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component):
     return status
 end
 
-Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2ExitInitializationMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -288,7 +292,7 @@ Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::
     return status
 end
 
-Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2Terminate(_component::fmi2Component)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -311,7 +315,7 @@ Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
     return status
 end
 
-Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2Reset(_component::fmi2Component)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -333,7 +337,7 @@ Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
     return status
 end
 
-Base.@ccallable function fmi2GetReal(
+Base.@ccallable function jl_fmi2GetReal(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -360,7 +364,7 @@ Base.@ccallable function fmi2GetReal(
     return status
 end
 
-Base.@ccallable function fmi2GetInteger(
+Base.@ccallable function jl_fmi2GetInteger(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -389,7 +393,7 @@ Base.@ccallable function fmi2GetInteger(
     return status
 end
 
-Base.@ccallable function fmi2GetBoolean(
+Base.@ccallable function jl_fmi2GetBoolean(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -418,7 +422,7 @@ Base.@ccallable function fmi2GetBoolean(
     return status
 end
 
-Base.@ccallable function fmi2GetString(
+Base.@ccallable function jl_fmi2GetString(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -447,7 +451,7 @@ Base.@ccallable function fmi2GetString(
     return status
 end
 
-Base.@ccallable function fmi2SetReal(
+Base.@ccallable function jl_fmi2SetReal(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -475,7 +479,7 @@ Base.@ccallable function fmi2SetReal(
     return status
 end
 
-Base.@ccallable function fmi2SetInteger(
+Base.@ccallable function jl_fmi2SetInteger(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -504,7 +508,7 @@ Base.@ccallable function fmi2SetInteger(
     return status
 end
 
-Base.@ccallable function fmi2SetBoolean(
+Base.@ccallable function jl_fmi2SetBoolean(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -533,7 +537,7 @@ Base.@ccallable function fmi2SetBoolean(
     return status
 end
 
-Base.@ccallable function fmi2SetString(
+Base.@ccallable function jl_fmi2SetString(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -562,7 +566,10 @@ Base.@ccallable function fmi2SetString(
     return status
 end
 
-Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status
+Base.@ccallable function jl_fmi2SetTime(
+    _component::fmi2Component,
+    time::fmi2Real,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -585,7 +592,7 @@ Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real):
     return status
 end
 
-Base.@ccallable function fmi2SetContinuousStates(
+Base.@ccallable function jl_fmi2SetContinuousStates(
     _component::fmi2Component,
     _x::Ptr{fmi2Real},
     nx::Csize_t,
@@ -617,7 +624,7 @@ Base.@ccallable function fmi2SetContinuousStates(
     return status
 end
 
-Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterEventMode(_component::fmi2Component)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -640,7 +647,7 @@ Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Stat
     return status
 end
 
-Base.@ccallable function fmi2NewDiscreteStates(
+Base.@ccallable function jl_fmi2NewDiscreteStates(
     _component::fmi2Component,
     _fmi2eventInfo::Ptr{fmi2EventInfo},
 )::fmi2Status
@@ -670,7 +677,9 @@ Base.@ccallable function fmi2NewDiscreteStates(
     return status
 end
 
-Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterContinuousTimeMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -696,7 +705,7 @@ Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component):
     return status
 end
 
-Base.@ccallable function fmi2CompletedIntegratorStep(
+Base.@ccallable function jl_fmi2CompletedIntegratorStep(
     _component::fmi2Component,
     noSetFMUStatePriorToCurrentPoint::fmi2Boolean,
     enterEventMode::Ptr{fmi2Boolean},
@@ -733,7 +742,7 @@ Base.@ccallable function fmi2CompletedIntegratorStep(
     return status
 end
 
-Base.@ccallable function fmi2GetDerivatives(
+Base.@ccallable function jl_fmi2GetDerivatives(
     _component::fmi2Component,
     _derivatives::Ptr{fmi2Real},
     nx::Csize_t,
@@ -765,7 +774,7 @@ Base.@ccallable function fmi2GetDerivatives(
     return status
 end
 
-Base.@ccallable function fmi2GetEventIndicators(
+Base.@ccallable function jl_fmi2GetEventIndicators(
     _component::fmi2Component,
     _eventIndicators::Ptr{fmi2Real},
     ni::Csize_t,
@@ -800,7 +809,7 @@ Base.@ccallable function fmi2GetEventIndicators(
     return status
 end
 
-Base.@ccallable function fmi2GetContinuousStates(
+Base.@ccallable function jl_fmi2GetContinuousStates(
     _component::fmi2Component,
     _x::Ptr{fmi2Real},
     nx::Csize_t,
@@ -832,7 +841,7 @@ Base.@ccallable function fmi2GetContinuousStates(
     return status
 end
 
-Base.@ccallable function fmi2GetNominalsOfContinuousStates(
+Base.@ccallable function jl_fmi2GetNominalsOfContinuousStates(
     _component::fmi2Component,
     _x_nominal::Ptr{fmi2Real},
     nx::Csize_t,
