@@ -66,7 +66,7 @@ end
 
 ##############
 
-Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
+Base.@ccallable function jl_init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     dllLoc = unsafe_string(_dllLoc)
     comps = splitpath(dllLoc)
     resLoc = joinpath(comps[1:end-3]..., "resources")
@@ -86,16 +86,16 @@ Base.@ccallable function init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
 end
 
 # 2.1.4
-Base.@ccallable function fmi2GetTypesPlatform()::fmi2String
+Base.@ccallable function jl_fmi2GetTypesPlatform()::fmi2String
     return FMICore.fmi2GetTypesPlatform(FMIBUILD_FMU.cGetTypesPlatform)
 end
 
-Base.@ccallable function fmi2GetVersion()::fmi2String
+Base.@ccallable function jl_fmi2GetVersion()::fmi2String
     return FMICore.fmi2GetVersion(FMIBUILD_FMU.cGetVersion)
 end
 
 # 2.1.5
-Base.@ccallable function fmi2Instantiate(
+Base.@ccallable function jl_fmi2Instantiate(
     _instanceName::fmi2String,
     fmuType::fmi2Type,
     _fmuGUID::fmi2String,
@@ -117,11 +117,11 @@ Base.@ccallable function fmi2Instantiate(
     )
 end
 
-Base.@ccallable function fmi2FreeInstance(_component::fmi2Component)::Cvoid
+Base.@ccallable function jl_fmi2FreeInstance(_component::fmi2Component)::Cvoid
     return FMICore.fmi2FreeInstance(FMIBUILD_FMU.cFreeInstance, _component)
 end
 
-Base.@ccallable function fmi2SetDebugLogging(
+Base.@ccallable function jl_fmi2SetDebugLogging(
     _component::fmi2Component,
     loggingOn::fmi2Boolean,
     nCategories::Csize_t,
@@ -136,7 +136,7 @@ Base.@ccallable function fmi2SetDebugLogging(
     )
 end
 
-Base.@ccallable function fmi2SetupExperiment(
+Base.@ccallable function jl_fmi2SetupExperiment(
     _component::fmi2Component,
     toleranceDefined::fmi2Boolean,
     tolerance::fmi2Real,
@@ -155,29 +155,29 @@ Base.@ccallable function fmi2SetupExperiment(
     )
 end
 
-Base.@ccallable function fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2EnterInitializationMode(
         FMIBUILD_FMU.cEnterInitializationMode,
         _component,
     )
 end
 
-Base.@ccallable function fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2ExitInitializationMode(
         FMIBUILD_FMU.cExitInitializationMode,
         _component,
     )
 end
 
-Base.@ccallable function fmi2Terminate(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2Terminate(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2Terminate(FMIBUILD_FMU.cTerminate, _component)
 end
 
-Base.@ccallable function fmi2Reset(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2Reset(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2Reset(FMIBUILD_FMU.cReset, _component)
 end
 
-Base.@ccallable function fmi2GetReal(
+Base.@ccallable function jl_fmi2GetReal(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -186,7 +186,7 @@ Base.@ccallable function fmi2GetReal(
     return FMICore.fmi2GetReal!(FMIBUILD_FMU.cGetReal, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2GetInteger(
+Base.@ccallable function jl_fmi2GetInteger(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -195,7 +195,7 @@ Base.@ccallable function fmi2GetInteger(
     return FMICore.fmi2GetInteger!(FMIBUILD_FMU.cGetInteger, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2GetBoolean(
+Base.@ccallable function jl_fmi2GetBoolean(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -204,7 +204,7 @@ Base.@ccallable function fmi2GetBoolean(
     return FMICore.fmi2GetBoolean!(FMIBUILD_FMU.cGetBoolean, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2GetString(
+Base.@ccallable function jl_fmi2GetString(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -213,7 +213,7 @@ Base.@ccallable function fmi2GetString(
     return FMICore.fmi2GetString!(FMIBUILD_FMU.cGetString, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2SetReal(
+Base.@ccallable function jl_fmi2SetReal(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -222,7 +222,7 @@ Base.@ccallable function fmi2SetReal(
     return FMICore.fmi2SetReal(FMIBUILD_FMU.cSetReal, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2SetInteger(
+Base.@ccallable function jl_fmi2SetInteger(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -231,7 +231,7 @@ Base.@ccallable function fmi2SetInteger(
     return FMICore.fmi2SetInteger(FMIBUILD_FMU.cSetInteger, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2SetBoolean(
+Base.@ccallable function jl_fmi2SetBoolean(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -240,7 +240,7 @@ Base.@ccallable function fmi2SetBoolean(
     return FMICore.fmi2SetBoolean(FMIBUILD_FMU.cSetBoolean, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2SetString(
+Base.@ccallable function jl_fmi2SetString(
     _component::fmi2Component,
     _vr::Ptr{fmi2ValueReference},
     nvr::Csize_t,
@@ -249,11 +249,11 @@ Base.@ccallable function fmi2SetString(
     return FMICore.fmi2SetString(FMIBUILD_FMU.cSetString, _component, _vr, nvr, _value)
 end
 
-Base.@ccallable function fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status
+Base.@ccallable function jl_fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status
     return FMICore.fmi2SetTime(FMIBUILD_FMU.cSetTime, _component, time)
 end
 
-Base.@ccallable function fmi2SetContinuousStates(
+Base.@ccallable function jl_fmi2SetContinuousStates(
     _component::fmi2Component,
     _x::Ptr{fmi2Real},
     nx::Csize_t,
@@ -266,11 +266,11 @@ Base.@ccallable function fmi2SetContinuousStates(
     )
 end
 
-Base.@ccallable function fmi2EnterEventMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterEventMode(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2EnterEventMode(FMIBUILD_FMU.cEnterEventMode, _component)
 end
 
-Base.@ccallable function fmi2NewDiscreteStates(
+Base.@ccallable function jl_fmi2NewDiscreteStates(
     _component::fmi2Component,
     _fmi2eventInfo::Ptr{fmi2EventInfo},
 )::fmi2Status
@@ -281,14 +281,14 @@ Base.@ccallable function fmi2NewDiscreteStates(
     )
 end
 
-Base.@ccallable function fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status
     return FMICore.fmi2EnterContinuousTimeMode(
         FMIBUILD_FMU.cEnterContinuousTimeMode,
         _component,
     )
 end
 
-Base.@ccallable function fmi2CompletedIntegratorStep(
+Base.@ccallable function jl_fmi2CompletedIntegratorStep(
     _component::fmi2Component,
     noSetFMUStatePriorToCurrentPoint::fmi2Boolean,
     enterEventMode::Ptr{fmi2Boolean},
@@ -303,7 +303,7 @@ Base.@ccallable function fmi2CompletedIntegratorStep(
     )
 end
 
-Base.@ccallable function fmi2GetDerivatives(
+Base.@ccallable function jl_fmi2GetDerivatives(
     _component::fmi2Component,
     _derivatives::Ptr{fmi2Real},
     nx::Csize_t,
@@ -316,7 +316,7 @@ Base.@ccallable function fmi2GetDerivatives(
     )
 end
 
-Base.@ccallable function fmi2GetEventIndicators(
+Base.@ccallable function jl_fmi2GetEventIndicators(
     _component::fmi2Component,
     _eventIndicators::Ptr{fmi2Real},
     ni::Csize_t,
@@ -329,7 +329,7 @@ Base.@ccallable function fmi2GetEventIndicators(
     )
 end
 
-Base.@ccallable function fmi2GetContinuousStates(
+Base.@ccallable function jl_fmi2GetContinuousStates(
     _component::fmi2Component,
     _x::Ptr{fmi2Real},
     nx::Csize_t,
@@ -342,7 +342,7 @@ Base.@ccallable function fmi2GetContinuousStates(
     )
 end
 
-Base.@ccallable function fmi2GetNominalsOfContinuousStates(
+Base.@ccallable function jl_fmi2GetNominalsOfContinuousStates(
     _component::fmi2Component,
     _x_nominal::Ptr{fmi2Real},
     nx::Csize_t,
