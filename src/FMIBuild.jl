@@ -45,7 +45,7 @@ function packagePath(pkg;)
 
     splits = splitpath(path)
 
-    return joinpath(splits[1:end-2]...)
+    return joinpath(splits[1:(end-2)]...)
 end
 
 """
@@ -196,7 +196,7 @@ function saveFMU(
     fmu_src_in_merge_dir = splitpath(fmu_src_file)[end]
     while !isfile(joinpath(source_pkf_dir, "Project.toml")) && length(source_pkf_dir) > 0
         pathcomp = splitpath(source_pkf_dir)
-        source_pkf_dir = (length(pathcomp) > 1 ? joinpath(pathcomp[1:end-1]...) : "")
+        source_pkf_dir = (length(pathcomp) > 1 ? joinpath(pathcomp[1:(end-1)]...) : "")
         fmu_src_in_merge_dir = joinpath(pathcomp[end], fmu_src_in_merge_dir)
     end
     @assert length(source_pkf_dir) > 0 [

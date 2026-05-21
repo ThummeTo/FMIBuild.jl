@@ -45,7 +45,7 @@ function dereferenceInstance(address::fmi2Component)
     return nothing
 end
 
-function logInfo(_component::fmi2Component, message, status::fmi2Status=fmi2StatusOK)
+function logInfo(_component::fmi2Component, message, status::fmi2Status = fmi2StatusOK)
     component = dereferenceInstance(_component)
     logInfo(component, message, status)
 end
@@ -53,13 +53,13 @@ end
 function logWarning(
     _component::fmi2Component,
     message,
-    status::fmi2Status=fmi2StatusWarning,
+    status::fmi2Status = fmi2StatusWarning,
 )
     component = dereferenceInstance(_component)
     logWarning(component, message, status)
 end
 
-function logError(_component::fmi2Component, message, status::fmi2Status=fmi2StatusError)
+function logError(_component::fmi2Component, message, status::fmi2Status = fmi2StatusError)
     component = dereferenceInstance(_component)
     logError(component, message, status)
 end
@@ -67,7 +67,7 @@ end
 Base.@ccallable function jl_init_FMU(_dllLoc::Ptr{Cchar})::Cvoid
     dllLoc = unsafe_string(_dllLoc)
     comps = splitpath(dllLoc)
-    resLoc = joinpath(comps[1:end-3]..., "resources")
+    resLoc = joinpath(comps[1:(end-3)]..., "resources")
 
     @info "init_FMU(...)\nDLL location: $(dllLoc)\nResources location: $(resLoc)"
 
@@ -236,7 +236,9 @@ Base.@ccallable function jl_fmi2SetupExperiment(
     return status
 end
 
-Base.@ccallable function jl_fmi2EnterInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterInitializationMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -262,7 +264,9 @@ Base.@ccallable function jl_fmi2EnterInitializationMode(_component::fmi2Componen
     return status
 end
 
-Base.@ccallable function jl_fmi2ExitInitializationMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2ExitInitializationMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -562,7 +566,10 @@ Base.@ccallable function jl_fmi2SetString(
     return status
 end
 
-Base.@ccallable function jl_fmi2SetTime(_component::fmi2Component, time::fmi2Real)::fmi2Status
+Base.@ccallable function jl_fmi2SetTime(
+    _component::fmi2Component,
+    time::fmi2Real,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
@@ -670,7 +677,9 @@ Base.@ccallable function jl_fmi2NewDiscreteStates(
     return status
 end
 
-Base.@ccallable function jl_fmi2EnterContinuousTimeMode(_component::fmi2Component)::fmi2Status
+Base.@ccallable function jl_fmi2EnterContinuousTimeMode(
+    _component::fmi2Component,
+)::fmi2Status
     status = fmi2StatusError
     try
         if FMIBUILD_LOGGING
