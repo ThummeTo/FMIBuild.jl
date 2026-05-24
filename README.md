@@ -2,7 +2,7 @@
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
-[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
+[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because these dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
 [![Test (latest)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml) 
