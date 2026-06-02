@@ -1,4 +1,4 @@
-name: Test v1 (latest)
+name: Test '1'
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
     paths:
       - 'src/**'
       - 'test/**'
-      - '.github/workflows/Test.yml'
+      - '.github/workflows/TestLatest.yml'
       - 'Project.toml'
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1'] # "1" automatically expands to the latest stable 1.x release of Julia
+        julia-version: ['1']
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest]
         experimental: [false]
@@ -41,7 +41,7 @@ jobs:
 
      # Set up cache
       - name: "Set up cache"
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
         with:

@@ -1,4 +1,4 @@
-name: Test v1.6 (LTS)
+name: Test 'lts'
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
     paths:
       - 'src/**'
       - 'test/**'
-      - '.github/workflows/Test.yml'
+      - '.github/workflows/TestLTS.yml'
       - 'Project.toml'
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
 
      # Set up cache
       - name: "Set up cache"
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
         with:
