@@ -48,6 +48,14 @@ function packagePath(pkg;)
     return joinpath(splits[1:(end-2)]...)
 end
 
+function addPackageFromEnvironment(pkg::String, path::String)
+    if isdir(joinpath(path, ".git"))
+        Pkg.add(path = path)
+    else
+        Pkg.add(pkg)
+    end
+end
+
 """
     saveFMU(fmu::FMU2, 
      fmu_path::String, 
@@ -270,7 +278,7 @@ function saveFMU(
     else # the environment the exporter is called from *has* FMIExport.jl installed
         old_fmiexportPath = packagePath("FMIExport")
         if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
-            @info "[Build FMU]    > `FMIExport` for FMU not installed, adding at `$(default_fmiexportPath)`, adding `FMIExport` from default environment."
+            @info "[Build FMU]    > `FMIExport` for FMU not installed, adding `FMIExport` from `$(default_fmiexportPath)`."
             Pkg.add(path = default_fmiexportPath)
         elseif lowercase(old_fmiexportPath) == lowercase(default_fmiexportPath) # the FMU is already using the most recent version of FMIExport.jl
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out for FMU, is `$(default_fmiexportPath)`."
@@ -288,12 +296,13 @@ function saveFMU(
         old_fmibasePath = packagePath("FMIBase")
         if isnothing(old_fmibasePath)
             @info "[Build FMU]    > `FMIBase` not installed, adding at `$(default_fmibasePath)`, adding `FMIBase` from default environment."
-            Pkg.add(path = default_fmibasePath)
+            addPackageFromEnvironment("FMIBase", default_fmibasePath)
         elseif lowercase(old_fmibasePath) == lowercase(default_fmibasePath)
-            @info "[Build FMU]    > Most recent version (as in default environment) of `FMIBase` already checked out, is `$(default_fmibasePath)`."
+            @info "[Build FMU]    > Most recent version (as in default environment) of `FMIBase` already checked out, adding as direct dependency from `$(default_fmibasePath)`."
+            addPackageFromEnvironment("FMIBase", default_fmibasePath)
         else
             @info "[Build FMU]    > Replacing `FMIBase` at `$(old_fmibasePath)` with the default environment installation at `$(default_fmibasePath)`."
-            Pkg.add(path = default_fmibasePath)
+            addPackageFromEnvironment("FMIBase", default_fmibasePath)
         end
     end
 

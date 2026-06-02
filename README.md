@@ -2,7 +2,7 @@
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
-[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because this dependencies should not be part of the compiled FMU, they are out-sourced into this package.
+[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because these dependencies should not be part of the compiled FMU, they are out-sourced into this package.
 [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
 
 [![Test (latest)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml) 
@@ -12,7 +12,7 @@
 
 ## How can I use FMIBuild.jl?
 
-**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However you can install *FMIBuild.jl* by following these steps.
+**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However, you can install *FMIBuild.jl* by following these steps.
 
 1\. Open a Julia-REPL, switch to package mode using `]`, activate your preferred environment.
 
@@ -26,7 +26,7 @@
 (@v1.x) pkg> test FMIBuild
 ```
 
-## What FMI.jl-Library should I use?
+## What FMI.jl library should I use?
 ![FMI.jl Family](https://github.com/ThummeTo/FMI.jl/blob/main/docs/src/assets/FMI_JL_family.png?raw=true  "FMI.jl Family")
 To keep dependencies nice and clean, the original package *FMI.jl* had been split into new packages:
 - [*FMI.jl*](https://github.com/ThummeTo/FMI.jl): High level loading, manipulating, saving or building entire FMUs from scratch

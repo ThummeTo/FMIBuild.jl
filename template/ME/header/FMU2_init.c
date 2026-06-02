@@ -23,8 +23,10 @@ JL_DLLEXPORT char *dirname(char *);
 
 #ifdef _WIN32
 #define FMU_PATH_MAX MAX_PATH
+#define FMU2_EXPORT __declspec(dllexport)
 #else
 #define FMU_PATH_MAX PATH_MAX
+#define FMU2_EXPORT __attribute__((visibility("default")))
 #endif
 
 void setup_args(int argc, char **argv) {
@@ -79,13 +81,26 @@ void init_julia(int argc, char **argv) {
     setup_args(argc, argv);
 
     const char *sysimage_path = get_sysimage_path(JULIAC_PROGRAM_LIBNAME);
-    char *_sysimage_path = strdup(sysimage_path);
+#ifdef _WIN32
+    char *abs_sysimage_path = _fullpath(NULL, sysimage_path, 0);
+#else
+    char *abs_sysimage_path = realpath(sysimage_path, NULL);
+#endif
+    char *_sysimage_path = strdup(abs_sysimage_path);
     char *root_dir = dirname(dirname(_sysimage_path));
     set_depot_load_path(root_dir);
-    free(_sysimage_path);
 
-    jl_options.image_file = sysimage_path;
+#if JULIA_VERSION_MAJOR == 1 && JULIA_VERSION_MINOR <= 11
+    jl_options.image_file = abs_sysimage_path;
     julia_init(JL_IMAGE_CWD);
+#else
+    size_t bindir_len = strlen(root_dir) + 5;
+    char *bindir = (char *)malloc(bindir_len);
+    snprintf(bindir, bindir_len, "%s/bin", root_dir);
+    jl_init_with_image_file(bindir, abs_sysimage_path);
+    free(bindir);
+#endif
+    free(_sysimage_path);
 }
 
 void shutdown_julia(int retcode) { jl_atexit_hook(retcode); }
@@ -158,34 +173,34 @@ void destructor(void)
     }
 }
 
-const char* fmi2GetTypesPlatform(void) { ensure_constructor(); return jl_fmi2GetTypesPlatform(); }
-const char* fmi2GetVersion(void) { ensure_constructor(); return jl_fmi2GetVersion(); }
-fmi2Component fmi2Instantiate(fmi2String a, fmi2Type b, fmi2String c, fmi2String d, const fmi2CallbackFunctions* e, fmi2Boolean f, fmi2Boolean g) { ensure_constructor(); return jl_fmi2Instantiate(a, b, c, d, e, f, g); }
-void fmi2FreeInstance(fmi2Component a) { ensure_constructor(); jl_fmi2FreeInstance(a); }
-fmi2Status fmi2SetDebugLogging(fmi2Component a, fmi2Boolean b, size_t c, const fmi2String d[]) { ensure_constructor(); return jl_fmi2SetDebugLogging(a, b, c, d); }
-fmi2Status fmi2SetupExperiment(fmi2Component a, fmi2Boolean b, fmi2Real c, fmi2Real d, fmi2Boolean e, fmi2Real f) { ensure_constructor(); return jl_fmi2SetupExperiment(a, b, c, d, e, f); }
-fmi2Status fmi2EnterInitializationMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterInitializationMode(a); }
-fmi2Status fmi2ExitInitializationMode(fmi2Component a) { ensure_constructor(); return jl_fmi2ExitInitializationMode(a); }
-fmi2Status fmi2Terminate(fmi2Component a) { ensure_constructor(); return jl_fmi2Terminate(a); }
-fmi2Status fmi2Reset(fmi2Component a) { ensure_constructor(); return jl_fmi2Reset(a); }
-fmi2Status fmi2GetReal(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Real d[]) { ensure_constructor(); return jl_fmi2GetReal(a, b, c, d); }
-fmi2Status fmi2GetInteger(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Integer d[]) { ensure_constructor(); return jl_fmi2GetInteger(a, b, c, d); }
-fmi2Status fmi2GetBoolean(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Boolean d[]) { ensure_constructor(); return jl_fmi2GetBoolean(a, b, c, d); }
-fmi2Status fmi2GetString(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2String d[]) { ensure_constructor(); return jl_fmi2GetString(a, b, c, d); }
-fmi2Status fmi2SetReal(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Real d[]) { ensure_constructor(); return jl_fmi2SetReal(a, b, c, d); }
-fmi2Status fmi2SetInteger(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Integer d[]) { ensure_constructor(); return jl_fmi2SetInteger(a, b, c, d); }
-fmi2Status fmi2SetBoolean(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Boolean d[]) { ensure_constructor(); return jl_fmi2SetBoolean(a, b, c, d); }
-fmi2Status fmi2SetString(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2String d[]) { ensure_constructor(); return jl_fmi2SetString(a, b, c, d); }
-fmi2Status fmi2SetTime(fmi2Component a, fmi2Real b) { ensure_constructor(); return jl_fmi2SetTime(a, b); }
-fmi2Status fmi2SetContinuousStates(fmi2Component a, const fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2SetContinuousStates(a, b, c); }
-fmi2Status fmi2EnterEventMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterEventMode(a); }
-fmi2Status fmi2NewDiscreteStates(fmi2Component a, fmi2EventInfo* b) { ensure_constructor(); return jl_fmi2NewDiscreteStates(a, b); }
-fmi2Status fmi2EnterContinuousTimeMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterContinuousTimeMode(a); }
-fmi2Status fmi2CompletedIntegratorStep(fmi2Component a, fmi2Boolean b, fmi2Boolean* c, fmi2Boolean* d) { ensure_constructor(); return jl_fmi2CompletedIntegratorStep(a, b, c, d); }
-fmi2Status fmi2GetDerivatives(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetDerivatives(a, b, c); }
-fmi2Status fmi2GetEventIndicators(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetEventIndicators(a, b, c); }
-fmi2Status fmi2GetContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetContinuousStates(a, b, c); }
-fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetNominalsOfContinuousStates(a, b, c); }
+FMU2_EXPORT const char* fmi2GetTypesPlatform(void) { ensure_constructor(); return jl_fmi2GetTypesPlatform(); }
+FMU2_EXPORT const char* fmi2GetVersion(void) { ensure_constructor(); return jl_fmi2GetVersion(); }
+FMU2_EXPORT fmi2Component fmi2Instantiate(fmi2String a, fmi2Type b, fmi2String c, fmi2String d, const fmi2CallbackFunctions* e, fmi2Boolean f, fmi2Boolean g) { ensure_constructor(); return jl_fmi2Instantiate(a, b, c, d, e, f, g); }
+FMU2_EXPORT void fmi2FreeInstance(fmi2Component a) { ensure_constructor(); jl_fmi2FreeInstance(a); }
+FMU2_EXPORT fmi2Status fmi2SetDebugLogging(fmi2Component a, fmi2Boolean b, size_t c, const fmi2String d[]) { ensure_constructor(); return jl_fmi2SetDebugLogging(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetupExperiment(fmi2Component a, fmi2Boolean b, fmi2Real c, fmi2Real d, fmi2Boolean e, fmi2Real f) { ensure_constructor(); return jl_fmi2SetupExperiment(a, b, c, d, e, f); }
+FMU2_EXPORT fmi2Status fmi2EnterInitializationMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterInitializationMode(a); }
+FMU2_EXPORT fmi2Status fmi2ExitInitializationMode(fmi2Component a) { ensure_constructor(); return jl_fmi2ExitInitializationMode(a); }
+FMU2_EXPORT fmi2Status fmi2Terminate(fmi2Component a) { ensure_constructor(); return jl_fmi2Terminate(a); }
+FMU2_EXPORT fmi2Status fmi2Reset(fmi2Component a) { ensure_constructor(); return jl_fmi2Reset(a); }
+FMU2_EXPORT fmi2Status fmi2GetReal(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Real d[]) { ensure_constructor(); return jl_fmi2GetReal(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2GetInteger(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Integer d[]) { ensure_constructor(); return jl_fmi2GetInteger(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2GetBoolean(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2Boolean d[]) { ensure_constructor(); return jl_fmi2GetBoolean(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2GetString(fmi2Component a, const fmi2ValueReference b[], size_t c, fmi2String d[]) { ensure_constructor(); return jl_fmi2GetString(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetReal(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Real d[]) { ensure_constructor(); return jl_fmi2SetReal(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetInteger(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Integer d[]) { ensure_constructor(); return jl_fmi2SetInteger(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetBoolean(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Boolean d[]) { ensure_constructor(); return jl_fmi2SetBoolean(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetString(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2String d[]) { ensure_constructor(); return jl_fmi2SetString(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2SetTime(fmi2Component a, fmi2Real b) { ensure_constructor(); return jl_fmi2SetTime(a, b); }
+FMU2_EXPORT fmi2Status fmi2SetContinuousStates(fmi2Component a, const fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2SetContinuousStates(a, b, c); }
+FMU2_EXPORT fmi2Status fmi2EnterEventMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterEventMode(a); }
+FMU2_EXPORT fmi2Status fmi2NewDiscreteStates(fmi2Component a, fmi2EventInfo* b) { ensure_constructor(); return jl_fmi2NewDiscreteStates(a, b); }
+FMU2_EXPORT fmi2Status fmi2EnterContinuousTimeMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterContinuousTimeMode(a); }
+FMU2_EXPORT fmi2Status fmi2CompletedIntegratorStep(fmi2Component a, fmi2Boolean b, fmi2Boolean* c, fmi2Boolean* d) { ensure_constructor(); return jl_fmi2CompletedIntegratorStep(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2GetDerivatives(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetDerivatives(a, b, c); }
+FMU2_EXPORT fmi2Status fmi2GetEventIndicators(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetEventIndicators(a, b, c); }
+FMU2_EXPORT fmi2Status fmi2GetContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetContinuousStates(a, b, c); }
+FMU2_EXPORT fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetNominalsOfContinuousStates(a, b, c); }
 
 #ifdef _WIN32
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
