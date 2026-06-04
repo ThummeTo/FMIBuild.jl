@@ -72,10 +72,23 @@ fmi2Status fmi2SetBoolean(fmi2Component, const fmi2ValueReference[], size_t, con
 fmi2Status fmi2SetString (fmi2Component, const fmi2ValueReference[], size_t, const fmi2String[]);
 
 // 2.1.8
-// ToDo: Set/Get FMU state
+fmi2Status fmi2GetFMUstate(fmi2Component, fmi2FMUstate*);
+fmi2Status fmi2SetFMUstate(fmi2Component, fmi2FMUstate);
+fmi2Status fmi2FreeFMUstate(fmi2Component, fmi2FMUstate*);
+fmi2Status fmi2SerializedFMUstateSize(fmi2Component, fmi2FMUstate, size_t*);
+fmi2Status fmi2SerializeFMUstate(fmi2Component, fmi2FMUstate, fmi2Byte[], size_t);
+fmi2Status fmi2DeSerializeFMUstate(fmi2Component, const fmi2Byte[], size_t, fmi2FMUstate*);
 
 // 2.1.9
-// ToDo: Directional Derivatives
+fmi2Status fmi2GetDirectionalDerivative(
+    fmi2Component,
+    const fmi2ValueReference[],
+    size_t,
+    const fmi2ValueReference[],
+    size_t,
+    const fmi2Real[],
+    fmi2Real[]
+);
 
 // 3.2.1
 fmi2Status fmi2SetTime(fmi2Component, fmi2Real);
