@@ -5,6 +5,10 @@
 
 // This file is a modified version of the julia_init.c-file
 
+#ifndef _WIN32
+#define _GNU_SOURCE
+#endif
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,6 +151,7 @@ void constructor(char* path)
     }
 
 #ifdef _WIN32
+    // Let Windows find the bundled Julia DLLs next to the FMU binary.
     char *dll_path = strdup(path);
     char *dll_dir = dirname(dll_path);
     SetDllDirectoryA(dll_dir);
@@ -160,6 +165,7 @@ void constructor(char* path)
 
 void ensure_constructor(void)
 {
+    // FMI entry points lazily initialize Julia after the platform loader returns.
     if (!FMU_INITIALIZED) {
         constructor(FMU_DLL_PATH);
     }
@@ -191,6 +197,13 @@ FMU2_EXPORT fmi2Status fmi2SetReal(fmi2Component a, const fmi2ValueReference b[]
 FMU2_EXPORT fmi2Status fmi2SetInteger(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Integer d[]) { ensure_constructor(); return jl_fmi2SetInteger(a, b, c, d); }
 FMU2_EXPORT fmi2Status fmi2SetBoolean(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2Boolean d[]) { ensure_constructor(); return jl_fmi2SetBoolean(a, b, c, d); }
 FMU2_EXPORT fmi2Status fmi2SetString(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2String d[]) { ensure_constructor(); return jl_fmi2SetString(a, b, c, d); }
+FMU2_EXPORT fmi2Status fmi2GetFMUstate(fmi2Component a, fmi2FMUstate* b) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2SetFMUstate(fmi2Component a, fmi2FMUstate b) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2FreeFMUstate(fmi2Component a, fmi2FMUstate* b) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2SerializedFMUstateSize(fmi2Component a, fmi2FMUstate b, size_t* c) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2SerializeFMUstate(fmi2Component a, fmi2FMUstate b, fmi2Byte c[], size_t d) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2DeSerializeFMUstate(fmi2Component a, const fmi2Byte b[], size_t c, fmi2FMUstate* d) { ensure_constructor(); return fmi2Error; }
+FMU2_EXPORT fmi2Status fmi2GetDirectionalDerivative(fmi2Component a, const fmi2ValueReference b[], size_t c, const fmi2ValueReference d[], size_t e, const fmi2Real f[], fmi2Real g[]) { ensure_constructor(); return fmi2Error; }
 FMU2_EXPORT fmi2Status fmi2SetTime(fmi2Component a, fmi2Real b) { ensure_constructor(); return jl_fmi2SetTime(a, b); }
 FMU2_EXPORT fmi2Status fmi2SetContinuousStates(fmi2Component a, const fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2SetContinuousStates(a, b, c); }
 FMU2_EXPORT fmi2Status fmi2EnterEventMode(fmi2Component a) { ensure_constructor(); return jl_fmi2EnterEventMode(a); }
@@ -203,6 +216,7 @@ FMU2_EXPORT fmi2Status fmi2GetContinuousStates(fmi2Component a, fmi2Real b[], si
 FMU2_EXPORT fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetNominalsOfContinuousStates(a, b, c); }
 
 #ifdef _WIN32
+// Windows DLL entry point: record the FMU DLL path, defer Julia startup to FMI calls.
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
     switch (fdwReason)
@@ -228,6 +242,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
         }
         break;
     case DLL_PROCESS_DETACH:
+        // Windows can shut Julia down on DLL unload without blocking FMPy.
         destructor();
         break;
     }
@@ -238,6 +253,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <dlfcn.h>
 
 #ifdef __cplusplus
 #define CP_BEGIN_EXTERN_C extern "C" {
@@ -249,20 +265,22 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 
 CP_BEGIN_EXTERN_C
 
+// Linux loader hook: only record the FMU shared-library path during dlopen.
 __attribute__((constructor))
 static void Initializer(int argc, char** argv, char** envp)
 {
-    char pid[20];
-    sprintf(pid, "/proc/%d/exe", getpid());
-    readlink(pid, FMU_DLL_PATH, sizeof(FMU_DLL_PATH));
-
-    constructor(FMU_DLL_PATH); 
+    Dl_info info;
+    if (dladdr((void *)&Initializer, &info) != 0 && info.dli_fname != NULL) {
+        if (realpath(info.dli_fname, FMU_DLL_PATH) == NULL) {
+            strncpy(FMU_DLL_PATH, info.dli_fname, sizeof(FMU_DLL_PATH) - 1);
+        }
+    }
 }
 
+// Keep Linux unload lightweight; Julia shutdown during dlclose can block importers.
 __attribute__((destructor))
 static void Finalizer()
 {
-    destructor();
 }
 
 CP_END_EXTERN_C
