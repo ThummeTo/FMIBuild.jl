@@ -151,6 +151,7 @@ void constructor(char* path)
     }
 
 #ifdef _WIN32
+    // Let Windows find the bundled Julia DLLs next to the FMU binary.
     char *dll_path = strdup(path);
     char *dll_dir = dirname(dll_path);
     SetDllDirectoryA(dll_dir);
@@ -164,6 +165,7 @@ void constructor(char* path)
 
 void ensure_constructor(void)
 {
+    // FMI entry points lazily initialize Julia after the platform loader returns.
     if (!FMU_INITIALIZED) {
         constructor(FMU_DLL_PATH);
     }
@@ -214,6 +216,7 @@ FMU2_EXPORT fmi2Status fmi2GetContinuousStates(fmi2Component a, fmi2Real b[], si
 FMU2_EXPORT fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component a, fmi2Real b[], size_t c) { ensure_constructor(); return jl_fmi2GetNominalsOfContinuousStates(a, b, c); }
 
 #ifdef _WIN32
+// Windows DLL entry point: record the FMU DLL path, defer Julia startup to FMI calls.
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
     switch (fdwReason)
@@ -239,6 +242,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
         }
         break;
     case DLL_PROCESS_DETACH:
+        // Windows can shut Julia down on DLL unload without blocking FMPy.
         destructor();
         break;
     }
@@ -261,6 +265,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 
 CP_BEGIN_EXTERN_C
 
+// Linux loader hook: only record the FMU shared-library path during dlopen.
 __attribute__((constructor))
 static void Initializer(int argc, char** argv, char** envp)
 {
@@ -272,6 +277,7 @@ static void Initializer(int argc, char** argv, char** envp)
     }
 }
 
+// Keep Linux unload lightweight; Julia shutdown during dlclose can block importers.
 __attribute__((destructor))
 static void Finalizer()
 {
