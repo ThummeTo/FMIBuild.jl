@@ -1,0 +1,11 @@
+# FMI 2 Model Exchange entry points, included only for ME-capable FMUs.
+precompile(Tuple{typeof(.jl_fmi2SetTime), fmi2Component, fmi2Real})
+precompile(Tuple{typeof(.jl_fmi2SetContinuousStates), fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.jl_fmi2EnterEventMode), fmi2Component})
+precompile(Tuple{typeof(.jl_fmi2NewDiscreteStates), fmi2Component, Ptr{fmi2EventInfo}})
+precompile(Tuple{typeof(.jl_fmi2EnterContinuousTimeMode), fmi2Component})
+precompile(Tuple{typeof(.jl_fmi2CompletedIntegratorStep), fmi2Component, fmi2Boolean, Ptr{fmi2Boolean}, Ptr{fmi2Boolean}})
+precompile(Tuple{typeof(.jl_fmi2GetDerivatives), fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.jl_fmi2GetEventIndicators), fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.jl_fmi2GetContinuousStates), fmi2Component, Ptr{fmi2Real}, Csize_t})
+precompile(Tuple{typeof(.jl_fmi2GetNominalsOfContinuousStates), fmi2Component, Ptr{fmi2Real}, Csize_t})
