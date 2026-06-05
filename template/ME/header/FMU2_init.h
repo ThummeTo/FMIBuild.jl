@@ -29,6 +29,14 @@ typedef enum
     fmi2Pending
 } fmi2Status;
 
+typedef enum
+{
+    fmi2DoStepStatus,
+    fmi2PendingStatus,
+    fmi2LastSuccessfulTime,
+    fmi2Terminated
+} fmi2StatusKind;
+
 // 2.1.4
 const char* fmi2GetTypesPlatform(void);
 const char* fmi2GetVersion(void);
@@ -112,6 +120,17 @@ fmi2Status fmi2GetDerivatives (fmi2Component, fmi2Real[], size_t);
 fmi2Status fmi2GetEventIndicators(fmi2Component, fmi2Real[], size_t);
 fmi2Status fmi2GetContinuousStates(fmi2Component, fmi2Real[], size_t);
 fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component, fmi2Real[], size_t);
+
+// 4.2.1, 4.2.2, 4.2.3
+fmi2Status fmi2SetRealInputDerivatives(fmi2Component, const fmi2ValueReference[], size_t, const fmi2Integer[], const fmi2Real[]);
+fmi2Status fmi2GetRealOutputDerivatives(fmi2Component, const fmi2ValueReference[], size_t, const fmi2Integer[], fmi2Real[]);
+fmi2Status fmi2DoStep(fmi2Component, fmi2Real, fmi2Real, fmi2Boolean);
+fmi2Status fmi2CancelStep(fmi2Component);
+fmi2Status fmi2GetStatus(fmi2Component, fmi2StatusKind, fmi2Status*);
+fmi2Status fmi2GetRealStatus(fmi2Component, fmi2StatusKind, fmi2Real*);
+fmi2Status fmi2GetIntegerStatus(fmi2Component, fmi2StatusKind, fmi2Integer*);
+fmi2Status fmi2GetBooleanStatus(fmi2Component, fmi2StatusKind, fmi2Boolean*);
+fmi2Status fmi2GetStringStatus(fmi2Component, fmi2StatusKind, fmi2String*);
 
 // Pure C-Implementations (windows-specific)
 #ifdef _WIN32
