@@ -1,3 +1,8 @@
+#
+# Copyright (c) 2021 Tobias Thummerer, Lars Mikelsons
+# Licensed under the MIT license. See LICENSE file in the project root for details.
+#
+
 # FMI 2 Model Exchange entry points, included only for ME-capable FMUs.
 precompile(Tuple{typeof(.jl_fmi2SetTime), fmi2Component, fmi2Real})
 precompile(Tuple{typeof(.jl_fmi2SetContinuousStates), fmi2Component, Ptr{fmi2Real}, Csize_t})

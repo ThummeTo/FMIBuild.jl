@@ -1,3 +1,8 @@
+#
+# Copyright (c) 2021 Tobias Thummerer, Lars Mikelsons
+# Licensed under the MIT license. See LICENSE file in the project root for details.
+#
+
 # FMI 2 common entry points shared by ME and CS FMUs.
 precompile(Tuple{typeof(.jl_fmi2GetTypesPlatform)})
 precompile(Tuple{typeof(.jl_fmi2GetVersion)})

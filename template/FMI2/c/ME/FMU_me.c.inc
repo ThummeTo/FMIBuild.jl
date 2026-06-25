@@ -1,3 +1,8 @@
+//
+// Copyright (c) 2021 Tobias Thummerer, Lars Mikelsons
+// Licensed under the MIT license. See LICENSE file in the project root for details.
+//
+
 // FMI 2.0 Model Exchange Julia entry points and exported C wrappers.
 
 fmi2Status jl_fmi2SetTime(fmi2Component, fmi2Real);
