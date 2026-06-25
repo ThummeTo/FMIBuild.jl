@@ -430,12 +430,7 @@ Base.@ccallable function jl_fmi2GetStatus(
     statusKind::fmi2StatusKind,
     _value::Ptr{fmi2Status},
 )::fmi2Status
-    return FMICore.fmi2GetStatus!(
-        FMIBUILD_FMU.cGetStatus,
-        _component,
-        statusKind,
-        _value,
-    )
+    return FMICore.fmi2GetStatus!(FMIBUILD_FMU.cGetStatus, _component, statusKind, _value)
 end
 
 Base.@ccallable function jl_fmi2GetRealStatus(

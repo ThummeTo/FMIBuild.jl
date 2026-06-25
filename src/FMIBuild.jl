@@ -50,7 +50,7 @@ end
 
 function addPackageFromEnvironment(pkg::String, path::String)
     if isdir(joinpath(path, ".git"))
-        Pkg.add(path = path)
+        Pkg.develop(path = path)
     else
         Pkg.add(pkg)
     end
@@ -60,7 +60,7 @@ end
 templatePath(parts...) = normpath(joinpath(@__DIR__, "..", "template", parts...))
 
 # Determine which FMI 2 interface fragments are needed from the model description.
-function fmi2TemplateInterfaces(fmu::FMU2)
+function templateInterfaces(fmu::FMU2)
     interfaces = Symbol[]
 
     if !isnothing(fmu.modelDescription.modelExchange)
@@ -93,33 +93,36 @@ function assembleTemplateFile(target, parts)
 end
 
 # Build the FMI 2 wrapper source/header/precompile set for the requested interfaces.
-function assembleFMI2BuildTemplates(target_dir::String, fmu_name::String, fmu::FMU2; debug::Bool = false)
-    interfaces = fmi2TemplateInterfaces(fmu)
+function assembleBuildTemplates(
+    target_dir::String,
+    fmu_name::String,
+    fmu::FMU2;
+    debug::Bool = false,
+)
+    interfaces = templateInterfaces(fmu)
     build_template_dir = joinpath(target_dir, "_template_" * fmu_name)
     mkpath(build_template_dir)
 
     header_parts = [
-        ("core", "header", "FMU_init_core.h"),
-        ("FMI2", "header", "FMU_types.h.inc"),
-        ("FMI2", "common", "header", "FMU_common.h.inc"),
+        ("core", "c", "FMU_init_core.h"),
+        ("FMI2", "c", "common", "FMU_types.h.inc"),
+        ("FMI2", "c", "common", "FMU_common.h.inc"),
     ]
-    c_parts = [
-        ("core", "header", "FMU_init_core.c"),
-        ("FMI2", "common", "header", "FMU_common.c.inc"),
-    ]
+    c_parts =
+        [("core", "c", "FMU_init_core.c"), ("FMI2", "c", "common", "FMU_common.c.inc")]
     precompile_files = [
         templatePath("core", "precompile", "core.jl"),
         templatePath("FMI2", "precompile", "common.jl"),
     ]
 
     if :ME in interfaces
-        push!(header_parts, ("FMI2", "ME", "header", "FMU_me.h.inc"))
-        push!(c_parts, ("FMI2", "ME", "header", "FMU_me.c.inc"))
+        push!(header_parts, ("FMI2", "c", "ME", "FMU_me.h.inc"))
+        push!(c_parts, ("FMI2", "c", "ME", "FMU_me.c.inc"))
         push!(precompile_files, templatePath("FMI2", "precompile", "me.jl"))
     end
     if :CS in interfaces
-        push!(header_parts, ("FMI2", "CS", "header", "FMU_cs.h.inc"))
-        push!(c_parts, ("FMI2", "CS", "header", "FMU_cs.c.inc"))
+        push!(header_parts, ("FMI2", "c", "CS", "FMU_cs.h.inc"))
+        push!(c_parts, ("FMI2", "c", "CS", "FMU_cs.c.inc"))
         push!(precompile_files, templatePath("FMI2", "precompile", "cs.jl"))
     end
 
@@ -128,7 +131,8 @@ function assembleFMI2BuildTemplates(target_dir::String, fmu_name::String, fmu::F
     assembleTemplateFile(generated_header, header_parts)
     assembleTemplateFile(generated_c, c_parts)
 
-    fmu_res = templatePath("FMI2", "FMU2", "src", debug ? "FMU2_content_debug.jl" : "FMU2_content.jl")
+    fmu_res =
+        templatePath("FMI2", "julia", debug ? "FMU_content_debug.jl" : "FMU_content.jl")
 
     return (
         fmu_source_template = fmu_res,
@@ -296,7 +300,7 @@ function saveFMU(
     @info "[Build FMU] Source package is $(source_pkf_dir), deployed at $(merge_dir)"
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
-    build_templates = assembleFMI2BuildTemplates(target_dir, fmu_name, fmu; debug = debug)
+    build_templates = assembleBuildTemplates(target_dir, fmu_name, fmu; debug = debug)
     @info "[Build FMU] FMI 2 interface templates: $(join(string.(build_templates.interfaces), ", "))"
 
     @info "[Build FMU] ... reading FMU template file at $(build_templates.fmu_source_template)"
