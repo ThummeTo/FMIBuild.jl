@@ -544,7 +544,7 @@ function saveFMU(
 
     if cleanup
         @info "[Build FMU] Clean up ..."
-        # ToDo: Clean-up is done by saving in a temporary directory (which may be deleted by the OS) 
+        rm(target_dir; recursive = true, force = true)
         @info "[Build FMU] ... clean up done."
     end
 
