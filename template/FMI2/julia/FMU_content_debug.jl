@@ -875,3 +875,124 @@ Base.@ccallable function jl_fmi2GetNominalsOfContinuousStates(
 
     return status
 end
+
+Base.@ccallable function jl_fmi2SetRealInputDerivatives(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _order::Ptr{fmi2Integer},
+    _value::Ptr{fmi2Real},
+)::fmi2Status
+    vr = unsafe_wrap(Array{fmi2ValueReference}, _vr, nvr)
+    order = unsafe_wrap(Array{fmi2Integer}, _order, nvr)
+    value = unsafe_wrap(Array{fmi2Real}, _value, nvr)
+
+    return FMICore.fmi2SetRealInputDerivatives(
+        FMIBUILD_FMU.cSetRealInputDerivatives,
+        _component,
+        vr,
+        nvr,
+        order,
+        value,
+    )
+end
+
+Base.@ccallable function jl_fmi2GetRealOutputDerivatives(
+    _component::fmi2Component,
+    _vr::Ptr{fmi2ValueReference},
+    nvr::Csize_t,
+    _order::Ptr{fmi2Integer},
+    _value::Ptr{fmi2Real},
+)::fmi2Status
+    vr = unsafe_wrap(Array{fmi2ValueReference}, _vr, nvr)
+    order = unsafe_wrap(Array{fmi2Integer}, _order, nvr)
+    value = unsafe_wrap(Array{fmi2Real}, _value, nvr)
+
+    return FMICore.fmi2GetRealOutputDerivatives!(
+        FMIBUILD_FMU.cGetRealOutputDerivatives,
+        _component,
+        vr,
+        nvr,
+        order,
+        value,
+    )
+end
+
+Base.@ccallable function jl_fmi2DoStep(
+    _component::fmi2Component,
+    currentCommunicationPoint::fmi2Real,
+    communicationStepSize::fmi2Real,
+    noSetFMUStatePriorToCurrentPoint::fmi2Boolean,
+)::fmi2Status
+    return FMICore.fmi2DoStep(
+        FMIBUILD_FMU.cDoStep,
+        _component,
+        currentCommunicationPoint,
+        communicationStepSize,
+        noSetFMUStatePriorToCurrentPoint,
+    )
+end
+
+Base.@ccallable function jl_fmi2CancelStep(_component::fmi2Component)::fmi2Status
+    return FMICore.fmi2CancelStep(FMIBUILD_FMU.cCancelStep, _component)
+end
+
+Base.@ccallable function jl_fmi2GetStatus(
+    _component::fmi2Component,
+    statusKind::fmi2StatusKind,
+    _value::Ptr{fmi2Status},
+)::fmi2Status
+    return FMICore.fmi2GetStatus!(FMIBUILD_FMU.cGetStatus, _component, statusKind, _value)
+end
+
+Base.@ccallable function jl_fmi2GetRealStatus(
+    _component::fmi2Component,
+    statusKind::fmi2StatusKind,
+    _value::Ptr{fmi2Real},
+)::fmi2Status
+    return FMICore.fmi2GetRealStatus!(
+        FMIBUILD_FMU.cGetRealStatus,
+        _component,
+        statusKind,
+        _value,
+    )
+end
+
+Base.@ccallable function jl_fmi2GetIntegerStatus(
+    _component::fmi2Component,
+    statusKind::fmi2StatusKind,
+    _value::Ptr{fmi2Integer},
+)::fmi2Status
+    return FMICore.fmi2GetIntegerStatus!(
+        FMIBUILD_FMU.cGetIntegerStatus,
+        _component,
+        statusKind,
+        _value,
+    )
+end
+
+Base.@ccallable function jl_fmi2GetBooleanStatus(
+    _component::fmi2Component,
+    statusKind::fmi2StatusKind,
+    _value::Ptr{fmi2Boolean},
+)::fmi2Status
+    return FMICore.fmi2GetBooleanStatus!(
+        FMIBUILD_FMU.cGetBooleanStatus,
+        _component,
+        statusKind,
+        _value,
+    )
+end
+
+Base.@ccallable function jl_fmi2GetStringStatus(
+    _component::fmi2Component,
+    statusKind::fmi2StatusKind,
+    _value::Ptr{fmi2String},
+)::fmi2Status
+    return FMICore.fmi2GetStringStatus!(
+        FMIBUILD_FMU.cGetStringStatus,
+        _component,
+        statusKind,
+        _value,
+    )
+end

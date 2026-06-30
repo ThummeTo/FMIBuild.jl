@@ -50,10 +50,97 @@ end
 
 function addPackageFromEnvironment(pkg::String, path::String)
     if isdir(joinpath(path, ".git"))
-        Pkg.add(path = path)
+        Pkg.develop(path = path)
     else
         Pkg.add(pkg)
     end
+end
+
+# Resolve paths relative to the FMIBuild template root.
+templatePath(parts...) = normpath(joinpath(@__DIR__, "..", "template", parts...))
+
+# Determine which FMI 2 interface fragments are needed from the model description.
+function templateInterfaces(fmu::FMU2)
+    interfaces = Symbol[]
+
+    if !isnothing(fmu.modelDescription.modelExchange)
+        push!(interfaces, :ME)
+    end
+    if !isnothing(fmu.modelDescription.coSimulation)
+        push!(interfaces, :CS)
+    end
+
+    @assert !isempty(interfaces) [
+        "fmiBuild(...): FMI 2 FMU must define at least one interface type, ModelExchange or CoSimulation.",
+    ]
+
+    return interfaces
+end
+
+# Read one template fragment from the shared template tree.
+function readTemplate(parts...)
+    return read(templatePath(parts...), String)
+end
+
+# Concatenate template fragments into one generated file for PackageCompiler.
+function assembleTemplateFile(target, parts)
+    open(target, "w") do io
+        for part in parts
+            write(io, readTemplate(part...))
+            write(io, "\n")
+        end
+    end
+end
+
+# Build the FMI 2 wrapper source/header/precompile set for the requested interfaces.
+function assembleBuildTemplates(
+    target_dir::String,
+    fmu_name::String,
+    fmu::FMU2;
+    debug::Bool = false,
+)
+    interfaces = templateInterfaces(fmu)
+    build_template_dir = joinpath(target_dir, "_template_" * fmu_name)
+    mkpath(build_template_dir)
+
+    header_parts = [
+        ("core", "c", "FMU_init_core.h"),
+        ("FMI2", "c", "common", "FMU_types.h.inc"),
+        ("FMI2", "c", "common", "FMU_common.h.inc"),
+    ]
+    c_parts =
+        [("core", "c", "FMU_init_core.c"), ("FMI2", "c", "common", "FMU_common.c.inc")]
+    precompile_files = [
+        templatePath("core", "precompile", "core.jl"),
+        templatePath("FMI2", "precompile", "common.jl"),
+    ]
+
+    if :ME in interfaces
+        push!(header_parts, ("FMI2", "c", "ME", "FMU_me.h.inc"))
+        push!(c_parts, ("FMI2", "c", "ME", "FMU_me.c.inc"))
+        push!(precompile_files, templatePath("FMI2", "precompile", "me.jl"))
+    end
+    if :CS in interfaces
+        push!(header_parts, ("FMI2", "c", "CS", "FMU_cs.h.inc"))
+        push!(c_parts, ("FMI2", "c", "CS", "FMU_cs.c.inc"))
+        push!(precompile_files, templatePath("FMI2", "precompile", "cs.jl"))
+    end
+
+    generated_header = joinpath(build_template_dir, "FMU_init.h")
+    generated_c = joinpath(build_template_dir, "FMU_init.c")
+    assembleTemplateFile(generated_header, header_parts)
+    assembleTemplateFile(generated_c, c_parts)
+
+    fmu_res =
+        templatePath("FMI2", "julia", debug ? "FMU_content_debug.jl" : "FMU_content.jl")
+
+    return (
+        fmu_source_template = fmu_res,
+        julia_init_c_file = generated_c,
+        header_files = [generated_header],
+        precompile_statements_file = precompile_files,
+        interfaces = interfaces,
+    )
 end
 
 """
@@ -148,9 +235,7 @@ function saveFMU(
         "fmiBuild(...): Currently, only `standalone=true` is supported.",
     ]
 
-    pkg_dir = "$(@__DIR__)/../template"
     (fmu_name, fmu_ext) = splitext(basename(fmu_path))
-    pkg_dir = joinpath(pkg_dir, "FMU2")
 
     @assert fmu_ext != "fmu" ["fmiBuild(...): `fmu_path` must end with `.fmu`."]
 
@@ -196,7 +281,6 @@ function saveFMU(
 
     mkpath(bin_dir)
 
-    pkg_dir = replace(pkg_dir, "\\" => "/")
     target_dir = replace(target_dir, "\\" => "/")
 
     @info "[Build FMU] Generating package ..."
@@ -216,13 +300,11 @@ function saveFMU(
     @info "[Build FMU] Source package is $(source_pkf_dir), deployed at $(merge_dir)"
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
-    fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content.jl"
-    if debug
-        fmu_res = "$(@__DIR__)/../template/ME/FMU2/src/FMU2_content_debug.jl"
-    end
+    build_templates = assembleBuildTemplates(target_dir, fmu_name, fmu; debug = debug)
+    @info "[Build FMU] FMI 2 interface templates: $(join(string.(build_templates.interfaces), ", "))"
 
-    @info "[Build FMU] ... reading FMU template file at $(fmu_res)"
-    f = open(fmu_res, "r")
+    @info "[Build FMU] ... reading FMU template file at $(build_templates.fmu_source_template)"
+    f = open(build_templates.fmu_source_template, "r")
     fmu_code = read(f, String)
     close(f)
 
@@ -267,9 +349,26 @@ function saveFMU(
     Pkg.activate(defaultEnv)
     default_fmiexportPath = packagePath("FMIExport")
     default_fmibasePath = packagePath("FMIBase")
+    default_fmiimportPath = packagePath("FMIImport")
 
     # adding Pkgs
     Pkg.activate(merge_dir)
+
+    # FMIImport must be available before adding FMIExport, because unreleased
+    # FMIExport versions may already require the local FMIImport version.
+    if isnothing(default_fmiimportPath)
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIImport`; resolving it from the registry."
+    else
+        old_fmiimportPath = packagePath("FMIImport")
+        if isnothing(old_fmiimportPath)
+            @info "[Build FMU]    > `FMIImport` not installed, adding it from `$(default_fmiimportPath)`."
+        elseif lowercase(old_fmiimportPath) == lowercase(default_fmiimportPath)
+            @info "[Build FMU]    > Using `FMIImport` from the default environment at `$(default_fmiimportPath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMIImport` at `$(old_fmiimportPath)` with `$(default_fmiimportPath)`."
+        end
+        addPackageFromEnvironment("FMIImport", default_fmiimportPath)
+    end
 
     # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
     #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
@@ -279,12 +378,12 @@ function saveFMU(
         old_fmiexportPath = packagePath("FMIExport")
         if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
             @info "[Build FMU]    > `FMIExport` for FMU not installed, adding `FMIExport` from `$(default_fmiexportPath)`."
-            Pkg.add(path = default_fmiexportPath)
+            Pkg.develop(path = default_fmiexportPath)
         elseif lowercase(old_fmiexportPath) == lowercase(default_fmiexportPath) # the FMU is already using the most recent version of FMIExport.jl
             @info "[Build FMU]    > Most recent version of `FMIExport` already checked out for FMU, is `$(default_fmiexportPath)`."
         else
             @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(default_fmiexportPath)` for FMU ."
-            Pkg.add(path = default_fmiexportPath)
+            Pkg.develop(path = default_fmiexportPath)
         end
     end
 
@@ -348,14 +447,12 @@ function saveFMU(
         merge_dir,
         joinpath(target_dir, "_" * fmu_name);
         lib_name = fmu_name,
-        precompile_execution_file = [joinpath(merge_dir, fmu_src_in_merge_dir)], # "$(@__DIR__)/../template/ME/precompile/FMU2_generate.jl"
-        precompile_statements_file = [
-            "$(@__DIR__)/../template/ME/precompile/FMU2_additional.jl",
-        ],
+        precompile_execution_file = [joinpath(merge_dir, fmu_src_in_merge_dir)],
+        precompile_statements_file = build_templates.precompile_statements_file,
         incremental = false,
         filter_stdlibs = false,
-        julia_init_c_file = "$(@__DIR__)/../template/ME/header/FMU2_init.c",
-        header_files = ["$(@__DIR__)/../template/ME/header/FMU2_init.h"],
+        julia_init_c_file = build_templates.julia_init_c_file,
+        header_files = build_templates.header_files,
         force = true,
         include_transitive_dependencies = true,
         include_lazy_artifacts = true,

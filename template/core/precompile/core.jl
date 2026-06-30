@@ -3,8 +3,5 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 #
 
-module FMU2
-
-include(joinpath(dirname(@__FILE__), "FMU2_content.jl"))
-
-end # module
+# Shared Julia runtime initialization entry point.
+precompile(Tuple{typeof(.jl_init_FMU), Ptr{Cchar}})
