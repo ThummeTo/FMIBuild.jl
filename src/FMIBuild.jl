@@ -349,9 +349,26 @@ function saveFMU(
     Pkg.activate(defaultEnv)
     default_fmiexportPath = packagePath("FMIExport")
     default_fmibasePath = packagePath("FMIBase")
+    default_fmiimportPath = packagePath("FMIImport")
 
     # adding Pkgs
     Pkg.activate(merge_dir)
+
+    # FMIImport must be available before adding FMIExport, because unreleased
+    # FMIExport versions may already require the local FMIImport version.
+    if isnothing(default_fmiimportPath)
+        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIImport`; resolving it from the registry."
+    else
+        old_fmiimportPath = packagePath("FMIImport")
+        if isnothing(old_fmiimportPath)
+            @info "[Build FMU]    > `FMIImport` not installed, adding it from `$(default_fmiimportPath)`."
+        elseif lowercase(old_fmiimportPath) == lowercase(default_fmiimportPath)
+            @info "[Build FMU]    > Using `FMIImport` from the default environment at `$(default_fmiimportPath)`."
+        else
+            @info "[Build FMU]    > Replacing `FMIImport` at `$(old_fmiimportPath)` with `$(default_fmiimportPath)`."
+        end
+        addPackageFromEnvironment("FMIImport", default_fmiimportPath)
+    end
 
     # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
     #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
