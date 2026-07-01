@@ -443,9 +443,10 @@ function saveFMU(
     @info "[Build FMU] ... generating package done."
 
     @info "[Build FMU] Compiling FMU ..."
+    compiled_dir = joinpath(target_dir, "_" * fmu_name)
     PackageCompiler.create_library(
         merge_dir,
-        joinpath(target_dir, "_" * fmu_name);
+        compiled_dir;
         lib_name = fmu_name,
         precompile_execution_file = [joinpath(merge_dir, fmu_src_in_merge_dir)],
         precompile_statements_file = build_templates.precompile_statements_file,
@@ -461,12 +462,19 @@ function saveFMU(
 
     @info "[Build FMU] ... compiling FMU done."
 
-    # under windows the binarys are located under bin, under linux they are under lib
-    if isdir(joinpath(target_dir, "_" * fmu_name, "bin"))
-        cp(joinpath(target_dir, "_" * fmu_name, "bin"), joinpath(bin_dir); force = true)
+    if cleanup
+        @info "[Build FMU] Removing compilation sources ..."
+        rm(merge_dir; recursive = true, force = true)
+        rm(joinpath(target_dir, "_template_" * fmu_name); recursive = true, force = true)
+        @info "[Build FMU] ... removing compilation sources done."
     end
-    if isdir(joinpath(target_dir, "_" * fmu_name, "lib"))
-        cp(joinpath(target_dir, "_" * fmu_name, "lib"), joinpath(bin_dir); force = true)
+
+    # under windows the binarys are located under bin, under linux they are under lib
+    if isdir(joinpath(compiled_dir, "bin"))
+        cp(joinpath(compiled_dir, "bin"), joinpath(bin_dir); force = true)
+    end
+    if isdir(joinpath(compiled_dir, "lib"))
+        cp(joinpath(compiled_dir, "lib"), joinpath(bin_dir); force = true)
     end
 
     # linux exports the fmu-lib binary file under "libFMU_NAME.so" which is wrong, it needs to be under "FMU_NAME.so". 
@@ -479,16 +487,14 @@ function saveFMU(
         )
     end
 
-    cp(
-        joinpath(target_dir, "_" * fmu_name, "share"),
-        joinpath(bin_dir, "..", "share");
-        force = true,
-    )
-    cp(
-        joinpath(target_dir, "_" * fmu_name, "include"),
-        joinpath(bin_dir, "..", "include");
-        force = true,
-    )
+    cp(joinpath(compiled_dir, "share"), joinpath(bin_dir, "..", "share"); force = true)
+    cp(joinpath(compiled_dir, "include"), joinpath(bin_dir, "..", "include"); force = true)
+
+    if cleanup
+        @info "[Build FMU] Removing compiled staging directory ..."
+        rm(compiled_dir; recursive = true, force = true)
+        @info "[Build FMU] ... removing compiled staging directory done."
+    end
 
     if resources != nothing
         @info "[Build FMU] Adding resource files ..."
@@ -518,10 +524,6 @@ function saveFMU(
     for (root, dirs, files) in walkdir(joinpath(target_dir, fmu_name))
         for file in files
             filepath = joinpath(root, file)
-            f = open(filepath, "r")
-            content = read(f, String)
-            close(f)
-
             zippath = subtractPath(filepath, joinpath(target_dir, fmu_name) * "/")
             println("\t$(zippath)")
             zf = ZipFile.addfile(
@@ -529,7 +531,12 @@ function saveFMU(
                 zippath;
                 method = (compress ? ZipFile.Deflate : ZipFile.Store),
             )
-            write(zf, content)
+            # more light-weight writing (chunk by chunk)
+            open(filepath, "r") do source
+                while !eof(source)
+                    write(zf, read(source, 1024 * 1024))
+                end
+            end
         end
     end
     close(zdir)
