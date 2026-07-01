@@ -531,6 +531,7 @@ function saveFMU(
                 zippath;
                 method = (compress ? ZipFile.Deflate : ZipFile.Store),
             )
+            # more light-weight writing (chunk by chunk)
             open(filepath, "r") do source
                 while !eof(source)
                     write(zf, read(source, 1024 * 1024))
