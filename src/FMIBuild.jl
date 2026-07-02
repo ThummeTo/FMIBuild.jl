@@ -154,6 +154,7 @@ end
      removeNoExportBlocks=true,
      suppressWarnings::Bool=false,
      debug::Bool=false,
+     cpu_target::String="generic",
      pkg_comp_kwargs...)
 
 Initiates the FMU building process. 
@@ -172,6 +173,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `removeNoExportBlocks` removes the blocks marked with `### FMIBUILD_NO_EXPORT_BEGIN ###` and `### FMIBUILD_NO_EXPORT_END ###` from the `fmu_src_file`, so it will not be part of the resulting FMU (default=`true`) 
     - `resources` a Dictionary of resources (srcPath::String => dstPath::String) for files to ship as part of the FMU
     - `debug` compiles the FMU in debug mode, including full exception handling for all FMI functions. Exception stack is printed through the FMI callback pipeline. This is extremly useful during FMU development, but slows down the FMU's simulation performance (defaul=false)
+    - `cpu_target` CPU target passed to PackageCompiler. The default `"generic"` creates one portable image and avoids the substantially higher memory usage of PackageCompiler's multi-target application default.
     - `suppressWarnings::Bool` an indicator wether warnings should be suppressed (default=false)
 """
 function saveFMU(
@@ -186,6 +188,7 @@ function saveFMU(
     resources::Union{Dict{String,String},Nothing} = nothing,
     debug::Bool = false,
     suppressWarnings::Bool = false,
+    cpu_target::String = "generic",
     pkg_comp_kwargs...,
 )
 
@@ -457,6 +460,7 @@ function saveFMU(
         force = true,
         include_transitive_dependencies = true,
         include_lazy_artifacts = true,
+        cpu_target = cpu_target,
         pkg_comp_kwargs...,
     )
 
