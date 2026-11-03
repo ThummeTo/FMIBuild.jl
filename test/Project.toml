@@ -1,4 +1,5 @@
 [deps]
+FMIBase = "900ee838-d029-460e-b485-d98a826ceef2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]

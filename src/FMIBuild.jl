@@ -25,6 +25,8 @@ using FMIBase.FMICore:
     fmi2BooleanAttributesExt,
     fmi2StringAttributesExt,
     fmi2EnumerationAttributesExt
+using FMIBase.FMICore:
+    fmi3VariableBoolean, fmi3VariableString, fmi3VariableBinary, fmi3VariableClock
 
 import PackageCompiler
 import Pkg
@@ -48,19 +50,30 @@ function packagePath(pkg;)
     return joinpath(splits[1:(end-2)]...)
 end
 
-function addPackageFromEnvironment(pkg::String, path::String)
-    if isdir(joinpath(path, ".git"))
-        Pkg.develop(path = path)
-    else
-        Pkg.add(pkg)
+# FMI packages, that are taken from the default environment (if available there) for the FMU
+const FMI_PACKAGES = ("FMICore", "FMIBase", "FMIImport", "FMIExport")
+
+# returns the paths of the FMI packages that are developed (tracked by path) in the active environment,
+# this includes indirect dependencies, which are not found by `packagePath`
+function developedPackagePaths()
+    paths = Dict{String,String}()
+    for (_, info) in Pkg.dependencies()
+        if info.name in FMI_PACKAGES && info.is_tracking_path
+            paths[info.name] = info.source
+        end
     end
+    return paths
 end
 
 # Resolve paths relative to the FMIBuild template root.
 templatePath(parts...) = normpath(joinpath(@__DIR__, "..", "template", parts...))
 
-# Determine which FMI 2 interface fragments are needed from the model description.
-function templateInterfaces(fmu::FMU2)
+# Template folder of the FMI version.
+templateVersion(::FMU2) = "FMI2"
+templateVersion(::FMU3) = "FMI3"
+
+# Determine which interface fragments are needed from the model description.
+function templateInterfaces(fmu::Union{FMU2,FMU3})
     interfaces = Symbol[]
 
     if !isnothing(fmu.modelDescription.modelExchange)
@@ -70,8 +83,17 @@ function templateInterfaces(fmu::FMU2)
         push!(interfaces, :CS)
     end
 
+    if isa(fmu, FMU3)
+        @assert isnothing(fmu.modelDescription.scheduledExecution) [
+            "fmiBuild(...): FMI3 ScheduledExecution is not supported, only ModelExchange and CoSimulation.",
+        ]
+        if any(mv -> isa(mv, fmi3VariableClock), fmu.modelDescription.modelVariables)
+            @warn "fmiBuild(...): FMI3 clocks are not supported, the clock functions of the FMU will return `fmi3Error`."
+        end
+    end
+
     @assert !isempty(interfaces) [
-        "fmiBuild(...): FMI 2 FMU must define at least one interface type, ModelExchange or CoSimulation.",
+        "fmiBuild(...): $(templateVersion(fmu)) FMU must define at least one interface type, ModelExchange or CoSimulation.",
     ]
 
     return interfaces
@@ -92,38 +114,37 @@ function assembleTemplateFile(target, parts)
     end
 end
 
-# Build the FMI 2 wrapper source/header/precompile set for the requested interfaces.
+# Build the FMI wrapper source/header/precompile set for the requested interfaces.
 function assembleBuildTemplates(
     target_dir::String,
     fmu_name::String,
-    fmu::FMU2;
+    fmu::Union{FMU2,FMU3};
     debug::Bool = false,
 )
+    version = templateVersion(fmu)
     interfaces = templateInterfaces(fmu)
     build_template_dir = joinpath(target_dir, "_template_" * fmu_name)
     mkpath(build_template_dir)
 
     header_parts = [
         ("core", "c", "FMU_init_core.h"),
-        ("FMI2", "c", "common", "FMU_types.h.inc"),
-        ("FMI2", "c", "common", "FMU_common.h.inc"),
+        (version, "c", "common", "FMU_types.h.inc"),
+        (version, "c", "common", "FMU_common.h.inc"),
     ]
     c_parts =
-        [("core", "c", "FMU_init_core.c"), ("FMI2", "c", "common", "FMU_common.c.inc")]
-    precompile_files = [
-        templatePath("core", "precompile", "core.jl"),
-        templatePath("FMI2", "precompile", "common.jl"),
-    ]
+        [("core", "c", "FMU_init_core.c"), (version, "c", "common", "FMU_common.c.inc")]
+    precompile_parts =
+        [("core", "precompile", "core.jl"), (version, "precompile", "common.jl")]
 
     if :ME in interfaces
-        push!(header_parts, ("FMI2", "c", "ME", "FMU_me.h.inc"))
-        push!(c_parts, ("FMI2", "c", "ME", "FMU_me.c.inc"))
-        push!(precompile_files, templatePath("FMI2", "precompile", "me.jl"))
+        push!(header_parts, (version, "c", "ME", "FMU_me.h.inc"))
+        push!(c_parts, (version, "c", "ME", "FMU_me.c.inc"))
+        push!(precompile_parts, (version, "precompile", "me.jl"))
     end
     if :CS in interfaces
-        push!(header_parts, ("FMI2", "c", "CS", "FMU_cs.h.inc"))
-        push!(c_parts, ("FMI2", "c", "CS", "FMU_cs.c.inc"))
-        push!(precompile_files, templatePath("FMI2", "precompile", "cs.jl"))
+        push!(header_parts, (version, "c", "CS", "FMU_cs.h.inc"))
+        push!(c_parts, (version, "c", "CS", "FMU_cs.c.inc"))
+        push!(precompile_parts, (version, "precompile", "cs.jl"))
     end
 
     generated_header = joinpath(build_template_dir, "FMU_init.h")
@@ -131,8 +152,20 @@ function assembleBuildTemplates(
     assembleTemplateFile(generated_header, header_parts)
     assembleTemplateFile(generated_c, c_parts)
 
+    # the precompile statements address the entry points via the FMU module (named like the FMU)
+    precompile_files = String[]
+    for part in precompile_parts
+        generated_precompile =
+            joinpath(build_template_dir, "precompile_$(part[1])_$(part[end])")
+        write(
+            generated_precompile,
+            replace(readTemplate(part...), "FMIBUILD_MODULE" => fmu_name),
+        )
+        push!(precompile_files, generated_precompile)
+    end
+
     fmu_res =
-        templatePath("FMI2", "julia", debug ? "FMU_content_debug.jl" : "FMU_content.jl")
+        templatePath(version, "julia", debug ? "FMU_content_debug.jl" : "FMU_content.jl")
 
     return (
         fmu_source_template = fmu_res,
@@ -143,9 +176,58 @@ function assembleBuildTemplates(
     )
 end
 
+# Returns the platform folder (inside `binaries`) and the library file extension, `nothing` if unsupported.
+function binaryPlatform(::FMU2)
+    platform = nothing
+    libext = nothing
+
+    juliaArch = Sys.WORD_SIZE
+    if juliaArch == 64
+        if Sys.iswindows()
+            platform = "win64"
+            libext = "dll"
+        elseif Sys.islinux()
+            platform = "linux64"
+            libext = "so"
+        elseif Sys.isapple()
+            platform = "x86_64-darwin"
+            libext = "dylib"
+        end
+    elseif juliaArch == 32
+        if Sys.iswindows()
+            platform = "win32"
+            libext = "dll"
+        elseif Sys.islinux()
+            # pass
+        elseif Sys.isapple()
+            # pass
+        end
+    end
+
+    return platform, libext
+end
+
+function binaryPlatform(::FMU3)
+    # FMI 3 platform tuple `<arch>-<sys>`
+    arch = Dict(:x86_64 => "x86_64", :i686 => "x86", :aarch64 => "aarch64")
+    if !haskey(arch, Sys.ARCH)
+        return nothing, nothing
+    end
+
+    if Sys.iswindows()
+        return "$(arch[Sys.ARCH])-windows", "dll"
+    elseif Sys.islinux()
+        return "$(arch[Sys.ARCH])-linux", "so"
+    elseif Sys.isapple()
+        return "$(arch[Sys.ARCH])-darwin", "dylib"
+    end
+
+    return nothing, nothing
+end
+
 """
-    saveFMU(fmu::FMU2, 
-     fmu_path::String, 
+    saveFMU(fmu::Union{FMU2, FMU3},
+     fmu_path::String,
      fmu_src_file::Union{Nothing, String}=nothing; 
      standalone=true, 
      compress=true, 
@@ -157,7 +239,7 @@ end
      cpu_target::String="generic",
      pkg_comp_kwargs...)
 
-Initiates the FMU building process. 
+Initiates the FMU building process. FMI 2 (ME, CS) and FMI 3 (ME, CS) FMUs are supported.
 
 The current package is detected, duplicated and extended by the FMI-functions. The resulting package is compiled and a suitable FMI-model-description is deployed. Finally, all files are zipped into a standard-compliant FMU that can be executed in a variety of tools without having Julia installed.
 
@@ -177,7 +259,7 @@ The current package is detected, duplicated and extended by the FMI-functions. T
     - `suppressWarnings::Bool` an indicator wether warnings should be suppressed (default=false)
 """
 function saveFMU(
-    fmu::FMU2,
+    fmu::Union{FMU2,FMU3},
     fmu_path::String,
     fmu_src_file::Union{Nothing,String} = nothing;
     standalone = true,
@@ -254,35 +336,12 @@ function saveFMU(
     mkpath(joinpath(target_dir, fmu_name))
     md_path = joinpath(target_dir, fmu_name, "modelDescription.xml")
 
-    bin_dir = joinpath(target_dir, fmu_name, "binaries")
-    libext = nothing
-
     # checking architecture
-    juliaArch = Sys.WORD_SIZE
-    if juliaArch == 64
-        if Sys.iswindows()
-            bin_dir = joinpath(bin_dir, "win64")
-            libext = "dll"
-        elseif Sys.islinux()
-            bin_dir = joinpath(bin_dir, "linux64")
-            libext = "so"
-        elseif Sys.isapple()
-            bin_dir = joinpath(bin_dir, "x86_64-darwin")
-            libext = "dylib"
-        end
-    elseif juliaArch == 32
-        if Sys.iswindows()
-            bin_dir = joinpath(bin_dir, "win32")
-            libext = "dll"
-        elseif Sys.islinux()
-            # pass
-        elseif Sys.isapple()
-            # pass
-        end
-    end
+    platform, libext = binaryPlatform(fmu)
 
     @assert !isnothing(libext) "fmiBuild(...): Unsupported target platform. Supporting Windows (64-, 32-bit), Linux (64-bit) and MacOS (64-bit). Please open an issue online if you need further architectures."
 
+    bin_dir = joinpath(target_dir, fmu_name, "binaries", platform)
     mkpath(bin_dir)
 
     target_dir = replace(target_dir, "\\" => "/")
@@ -305,7 +364,7 @@ function saveFMU(
     @info "[Build FMU] Relative src file path is $(fmu_src_in_merge_dir)"
 
     build_templates = assembleBuildTemplates(target_dir, fmu_name, fmu; debug = debug)
-    @info "[Build FMU] FMI 2 interface templates: $(join(string.(build_templates.interfaces), ", "))"
+    @info "[Build FMU] $(templateVersion(fmu)) interface templates: $(join(string.(build_templates.interfaces), ", "))"
 
     @info "[Build FMU] ... reading FMU template file at $(build_templates.fmu_source_template)"
     f = open(build_templates.fmu_source_template, "r")
@@ -351,62 +410,47 @@ function saveFMU(
         @info "[Build FMU]    > Using active environment `$(defaultEnv)`."
     end
     Pkg.activate(defaultEnv)
-    default_fmiexportPath = packagePath("FMIExport")
-    default_fmibasePath = packagePath("FMIBase")
-    default_fmiimportPath = packagePath("FMIImport")
+    # direct dependencies are found by `packagePath`, developed packages also as indirect dependencies
+    # (e.g. FMIBase and FMICore in the test environment of FMIExport.jl)
+    default_devPaths = developedPackagePaths()
+    default_paths = Dict{String,Union{String,Nothing}}(
+        pkg => get(default_devPaths, pkg, packagePath(pkg)) for pkg in FMI_PACKAGES
+    )
 
     # adding Pkgs
     Pkg.activate(merge_dir)
 
-    # FMIImport must be available before adding FMIExport, because unreleased
-    # FMIExport versions may already require the local FMIImport version.
-    if isnothing(default_fmiimportPath)
-        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIImport`; resolving it from the registry."
-    else
-        old_fmiimportPath = packagePath("FMIImport")
-        if isnothing(old_fmiimportPath)
-            @info "[Build FMU]    > `FMIImport` not installed, adding it from `$(default_fmiimportPath)`."
-        elseif lowercase(old_fmiimportPath) == lowercase(default_fmiimportPath)
-            @info "[Build FMU]    > Using `FMIImport` from the default environment at `$(default_fmiimportPath)`."
+    # [note] redirect the FMI packages in case the active environment (the env the installer is called from)
+    #        has *more recent* versions than the registry (necessary for Github-CI to use the current version from a PR).
+    #        All packages are developed in a single step, because unregistered versions may depend on each other
+    #        (e.g. FMIExport > FMIBase > FMICore) and can't be resolved one after another.
+    develop_specs = Pkg.PackageSpec[]
+    add_pkgs = String[]
+    for pkg in FMI_PACKAGES
+        path = default_paths[pkg]
+        if isnothing(path)
+            # the FMI templates use FMIBase, so it must be a direct dependency of the FMU
+            if pkg == "FMIBase"
+                @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIBase`, adding `FMIBase` from registry."
+                push!(add_pkgs, pkg)
+            else
+                @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `$(pkg)`; resolving it from the registry."
+            end
+        elseif haskey(default_devPaths, pkg) ||
+               isdir(joinpath(path, ".git")) ||
+               pkg == "FMIExport"
+            @info "[Build FMU]    > Developing `$(pkg)` from the default environment at `$(path)`."
+            push!(develop_specs, Pkg.PackageSpec(path = path))
         else
-            @info "[Build FMU]    > Replacing `FMIImport` at `$(old_fmiimportPath)` with `$(default_fmiimportPath)`."
-        end
-        addPackageFromEnvironment("FMIImport", default_fmiimportPath)
-    end
-
-    # [note] redirect FMIExport.jl package in case the active environment (the env the installer is called from)
-    #        has a *more recent* version of FMIExport.jl than the registry (necessary for Github-CI to use the current version from a PR)
-    if isnothing(default_fmiexportPath) # the environment the exporter is called from *has no* FMIExport.jl installed   
-        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIExport`."
-    else # the environment the exporter is called from *has* FMIExport.jl installed
-        old_fmiexportPath = packagePath("FMIExport")
-        if isnothing(old_fmiexportPath) # the FMU has no dependency to FMIExport.jl
-            @info "[Build FMU]    > `FMIExport` for FMU not installed, adding `FMIExport` from `$(default_fmiexportPath)`."
-            Pkg.develop(path = default_fmiexportPath)
-        elseif lowercase(old_fmiexportPath) == lowercase(default_fmiexportPath) # the FMU is already using the most recent version of FMIExport.jl
-            @info "[Build FMU]    > Most recent version of `FMIExport` already checked out for FMU, is `$(default_fmiexportPath)`."
-        else
-            @info "[Build FMU]    > Replacing `FMIExport` at `$(old_fmiexportPath)` with the current installation at `$(default_fmiexportPath)` for FMU ."
-            Pkg.develop(path = default_fmiexportPath)
+            @info "[Build FMU]    > Adding `$(pkg)` from registry."
+            push!(add_pkgs, pkg)
         end
     end
-
-    # FMIBase.jl
-    if isnothing(default_fmibasePath)
-        @info "[Build FMU]    > Default environment `$(defaultEnv)` has no dependency on `FMIBase`, adding `FMIBase` from registry."
-        Pkg.add("FMIBase")
-    else
-        old_fmibasePath = packagePath("FMIBase")
-        if isnothing(old_fmibasePath)
-            @info "[Build FMU]    > `FMIBase` not installed, adding at `$(default_fmibasePath)`, adding `FMIBase` from default environment."
-            addPackageFromEnvironment("FMIBase", default_fmibasePath)
-        elseif lowercase(old_fmibasePath) == lowercase(default_fmibasePath)
-            @info "[Build FMU]    > Most recent version (as in default environment) of `FMIBase` already checked out, adding as direct dependency from `$(default_fmibasePath)`."
-            addPackageFromEnvironment("FMIBase", default_fmibasePath)
-        else
-            @info "[Build FMU]    > Replacing `FMIBase` at `$(old_fmibasePath)` with the default environment installation at `$(default_fmibasePath)`."
-            addPackageFromEnvironment("FMIBase", default_fmibasePath)
-        end
+    if length(develop_specs) > 0
+        Pkg.develop(develop_specs)
+    end
+    if length(add_pkgs) > 0
+        Pkg.add(add_pkgs)
     end
 
     if removeLibDependency
@@ -667,6 +711,9 @@ function dependencyKindString(dependencies::AbstractArray)
     return depStr
 end
 
+# FMI 2 attributes that may be stored as `fmi2Boolean` (`Cint`), but are written as `true`/`false`
+const FMI2_BOOLEAN_FIELDS = (:canHandleMultipleSetPerTimeInstant,)
+
 function addFieldsAsAttributes(md, node, _struct, skiplist = ())
     for field in fieldnames(typeof(_struct))
         if field ∉ skiplist
@@ -682,9 +729,11 @@ function addFieldsAsAttributes(md, node, _struct, skiplist = ())
             end
 
             # special formatters
-            if isa(value, Bool)
+            if isa(value, Bool) ||
+               field ∈ FMI2_BOOLEAN_FIELDS ||
+               (field == :start && isa(_struct, fmi2BooleanAttributesExt))
 
-                value = (value ? "true" : "false")
+                value = (iszero(value) ? "false" : "true")
             elseif field == :causality
 
                 value = causalityToString(md, value)
@@ -696,28 +745,31 @@ function addFieldsAsAttributes(md, node, _struct, skiplist = ())
                 value = initialToString(md, value)
             elseif field == :dependencies
 
-                if length(value) <= 0
-                    return ""
-                end
-                depStr = "$(value[1])"
-                for d = 2:length(value)
-                    depStr *= " $(value[d])"
-                end
-                value = depStr
+                # [Note] an empty list is written as `dependencies=""` (depends on no known),
+                #        omitting the attribute would mean "depends on all knowns"
+                value = join(value, " ")
             elseif field == :dependenciesKind
 
-                if length(value) <= 0
-                    return ""
-                end
-                depStr = "$(dependencyKindToString(md, value[1]))"
-                for d = 2:length(value)
-                    depStr *= " $(dependencyKindToString(md, value[d]))"
-                end
-                value = depStr
+                value = join((dependencyKindToString(md, kind) for kind in value), " ")
             end
 
             link!(node, AttributeNode("$(field)", "$(value)"))
         end
+    end
+end
+
+# Formats `generationDateAndTime` (`DateTime` or `String`) for the model description.
+function dateTimeString(generationDateAndTime)
+    if isa(generationDateAndTime, Dates.DateTime)
+        return Dates.format(generationDateAndTime, "yyyy-mm-dd") *
+               "T" *
+               Dates.format(generationDateAndTime, "HH:MM:SS") *
+               "Z"
+    elseif isa(generationDateAndTime, String)
+        return generationDateAndTime
+    else
+        @warn "saveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(generationDateAndTime)` (typeof `$(typeof(generationDateAndTime))`)."
+        return ""
     end
 end
 
@@ -742,19 +794,13 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
         ),
     )
     if md.generationDateAndTime != nothing
-        dateTimeString = ""
-        if isa(md.generationDateAndTime, Dates.DateTime)
-            dateTimeString =
-                Dates.format(md.generationDateAndTime, "yyyy-mm-dd") *
-                "T" *
-                Dates.format(md.generationDateAndTime, "HH:MM:SS") *
-                "Z"
-        elseif isa(md.generationDateAndTime, String)
-            dateTimeString = md.generationDateAndTime
-        else
-            @warn "saveModelDescription(...): Unkown data type for field `generationDateAndTime`. Supported is `DateTime` and `String`, but given `$(md.generationDateAndTime)` (typeof `$(typeof(md.generationDateAndTime))`)."
-        end
-        link!(doc_root, AttributeNode("generationDateAndTime", dateTimeString))
+        link!(
+            doc_root,
+            AttributeNode(
+                "generationDateAndTime",
+                dateTimeString(md.generationDateAndTime),
+            ),
+        )
     end
     if !isnothing(md.variableNamingConvention)
         link!(
@@ -918,6 +964,207 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
             uk_node = ElementNode("Unknown")
             addFieldsAsAttributes(md, uk_node, uk)
             link!(inis, uk_node)
+        end
+    end
+
+    # save modelDescription (with linebreaks)
+    f = open(file_path, "w")
+    prettyprint(f, doc)
+    close(f)
+end
+
+# returns the field value, `nothing` if the field is not defined
+definedField(_struct, field::Symbol) =
+    (isdefined(_struct, field) ? getfield(_struct, field) : nothing)
+
+# FMI 3 attributes that may be stored as `fmi3Boolean` (`UInt8`), but are written as `true`/`false`
+const FMI3_BOOLEAN_FIELDS = (
+    :canHandleMultipleSetPerTimeInstant,
+    :intermediateUpdate,
+    :relativeQuantity,
+    :unbounded,
+    :reinit,
+    :canBeDeactivated,
+    :supportsFraction,
+)
+
+function addFMI3FieldsAsAttributes(md::fmi3ModelDescription, node, _struct, skiplist = ())
+    for field in fieldnames(typeof(_struct))
+        if field ∈ skiplist
+            continue
+        end
+
+        value = definedField(_struct, field)
+        if isnothing(value)
+            continue
+        end
+
+        name = "$(field)"
+
+        # special formatters
+        if isa(value, Bool) ||
+           field ∈ FMI3_BOOLEAN_FIELDS ||
+           (field == :start && isa(_struct, fmi3VariableBoolean))
+
+            value = (iszero(value) ? "false" : "true")
+        elseif field == :causality
+
+            value = causalityToString(md, value)
+        elseif field == :variability
+
+            value = variabilityToString(md, value)
+        elseif field == :initial
+
+            value = initialToString(md, value)
+        elseif field ∈ (:clocks, :dependencies)
+
+            value = join(value, " ")
+        elseif field == :dependenciesKind
+
+            value = join((dependencyKindToString(md, kind) for kind in value), " ")
+        elseif field == :index
+
+            # [Note] `fmi3VariableDependency` stores the value reference in field `index`
+            name = "valueReference"
+        end
+
+        link!(node, AttributeNode(name, "$(value)"))
+    end
+end
+
+function saveModelDescription(md::fmi3ModelDescription, file_path::String)
+    doc = XMLDocument()
+
+    doc_root = ElementNode("fmiModelDescription")
+    setroot!(doc, doc_root)
+    link!(doc_root, AttributeNode("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"))
+
+    # mandatory
+    link!(doc_root, AttributeNode("fmiVersion", "3.0"))
+    link!(doc_root, AttributeNode("modelName", md.modelName))
+    link!(doc_root, AttributeNode("instantiationToken", md.instantiationToken))
+
+    # optional
+    for field in (:description, :author, :version, :copyright, :license)
+        value = definedField(md, field)
+        if !isnothing(value)
+            link!(doc_root, AttributeNode("$(field)", value))
+        end
+    end
+    link!(
+        doc_root,
+        AttributeNode(
+            "generationTool",
+            "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
+        ),
+    )
+    generationDateAndTime = definedField(md, :generationDateAndTime)
+    if !isnothing(generationDateAndTime)
+        link!(
+            doc_root,
+            AttributeNode("generationDateAndTime", dateTimeString(generationDateAndTime)),
+        )
+    end
+    if !isnothing(md.variableNamingConvention)
+        link!(
+            doc_root,
+            AttributeNode(
+                "variableNamingConvention",
+                variableNamingConventionToString(md, md.variableNamingConvention),
+            ),
+        )
+    end
+
+    if !isnothing(md.modelExchange)
+        me = ElementNode("ModelExchange")
+        link!(doc_root, me)
+        addFMI3FieldsAsAttributes(md, me, md.modelExchange)
+    end
+
+    if !isnothing(md.coSimulation)
+        cs = ElementNode("CoSimulation")
+        link!(doc_root, cs)
+        # [Note] `needsCompletedIntegratorStep` is ME only, `canInterpolateInputs` is FMI 2 only
+        addFMI3FieldsAsAttributes(
+            md,
+            cs,
+            md.coSimulation,
+            (:needsCompletedIntegratorStep, :canInterpolateInputs),
+        )
+    end
+
+    for field in (:unitDefinitions, :typeDefinitions)
+        definitions = definedField(md, field)
+        if !isnothing(definitions) && length(definitions) > 0
+            @warn "saveModelDescription(...): Exporting FMI3 `$(field)` is not supported yet, they are not part of the model description."
+        end
+    end
+
+    logCategories = definedField(md, :logCategories)
+    if !isnothing(logCategories) && length(logCategories) > 0
+        lc = ElementNode("LogCategories")
+        link!(doc_root, lc)
+
+        for category in logCategories
+            c_node = ElementNode("Category")
+            addFMI3FieldsAsAttributes(md, c_node, category)
+            link!(lc, c_node)
+        end
+    end
+
+    if !isnothing(md.defaultExperiment)
+        de = ElementNode("DefaultExperiment")
+        link!(doc_root, de)
+        addFMI3FieldsAsAttributes(md, de, md.defaultExperiment)
+    end
+
+    mv = ElementNode("ModelVariables")
+    link!(doc_root, mv)
+    for sv in md.modelVariables
+        # element name is the data type, e.g. `fmi3VariableFloat64` -> `Float64`
+        sv_node = ElementNode(replace("$(nameof(typeof(sv)))", "fmi3Variable" => ""))
+        link!(mv, sv_node)
+
+        skiplist = [:annotations, :dependencies, :dependenciesKind]
+        # `canHandleMultipleSetPerTimeInstant` is only allowed for inputs
+        if sv.causality != fmi3CausalityInput
+            push!(skiplist, :canHandleMultipleSetPerTimeInstant)
+        end
+        # String and Binary start values are child elements
+        if isa(sv, fmi3VariableString) || isa(sv, fmi3VariableBinary)
+            push!(skiplist, :start)
+        end
+        addFMI3FieldsAsAttributes(md, sv_node, sv, skiplist)
+
+        if isa(sv, fmi3VariableString) && !isnothing(sv.start)
+            s_node = ElementNode("Start")
+            link!(s_node, AttributeNode("value", sv.start))
+            link!(sv_node, s_node)
+        elseif isa(sv, fmi3VariableBinary) && !isnothing(sv.start)
+            @warn "saveModelDescription(...): Exporting start values of FMI3 Binary variables is not supported yet, skipping start value of `$(sv.name)`."
+        end
+    end
+
+    ms = ElementNode("ModelStructure")
+    link!(doc_root, ms)
+
+    # [Note] element order is defined by the FMI 3 schema
+    for (field, name) in (
+        (:outputs, "Output"),
+        (:continuousStateDerivatives, "ContinuousStateDerivative"),
+        (:clockedStates, "ClockedState"),
+        (:initialUnknowns, "InitialUnknown"),
+        (:eventIndicators, "EventIndicator"),
+    )
+        unknowns = getfield(md.modelStructure, field)
+        if isnothing(unknowns)
+            continue
+        end
+
+        for uk in unknowns
+            uk_node = ElementNode(name)
+            addFMI3FieldsAsAttributes(md, uk_node, uk)
+            link!(ms, uk_node)
         end
     end
 
