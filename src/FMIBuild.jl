@@ -1096,7 +1096,7 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
     for field in (:unitDefinitions, :typeDefinitions)
         definitions = definedField(md, field)
         if !isnothing(definitions) && length(definitions) > 0
-            @warn "saveModelDescription(...): Exporting FMI3 `$(field)` is not supported yet, they are not part of the model description."
+            @warn "saveModelDescription(...): Exporting FMI3 `$(field)` is not supported yet, they (and the references to them) are not part of the model description."
         end
     end
 
@@ -1126,6 +1126,9 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         link!(mv, sv_node)
 
         skiplist = [:annotations, :dependencies, :dependenciesKind]
+        # type and unit definitions are not exported, so references to them would be undefined
+        # (e.g. the declared types of an embedded FMU)
+        append!(skiplist, (:declaredType, :unit, :displayUnit))
         # `canHandleMultipleSetPerTimeInstant` is only allowed for inputs
         if sv.causality != fmi3CausalityInput
             push!(skiplist, :canHandleMultipleSetPerTimeInstant)
