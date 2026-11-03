@@ -14,6 +14,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Julia headers (for initialization and gc commands), must be included before <windows.h>,
+// because julia.h configures the Windows headers itself (WIN32_LEAN_AND_MEAN, DECLSPEC_IMPORT)
+#include "julia.h"
+#include "uv.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -24,10 +29,7 @@ JL_DLLEXPORT char *dirname(char *);
 #include <libgen.h>
 #endif
 
-// Julia headers (for initialization and gc commands)
 #include "FMU_init.h"
-#include "julia.h"
-#include "uv.h"
 
 #ifdef _WIN32
 #define FMU_PATH_MAX MAX_PATH
