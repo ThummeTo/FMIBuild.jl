@@ -258,7 +258,19 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             flag.variability = fmi3VariabilityFixed
             flag.initial = fmi3InitialExact
             flag.start = fmi3True
-            md.modelVariables = [x, dx, flag]
+            # `initial` is set by default, but not allowed for the independent variable
+            time = FMICore.fmi3VariableFloat64("time", fmi3ValueReference(4))
+            time.causality = fmi3CausalityIndependent
+            # type and unit definitions are not exported yet, so references to them are skipped,
+            # as well as Enumeration variables (they require a declared type)
+            x.declaredType = "Position"
+            x.unit = "m"
+            mode = FMICore.fmi3VariableEnumeration("mode", fmi3ValueReference(5))
+            mode.variability = fmi3VariabilityConstant
+            mode.initial = fmi3InitialExact
+            mode.declaredType = "Mode"
+            mode.start = 1
+            md.modelVariables = [x, dx, flag, time, mode]
 
             out = fmi3VariableDependency(UInt(1))
             out.dependencies = UInt[] # depends on no known
@@ -270,7 +282,10 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             md.modelStructure.continuousStateDerivatives = [der]
 
             path = joinpath(mktempdir(), "modelDescription.xml")
-            FMIBuild.saveModelDescription(md, path)
+            @test_logs (:warn, r"skipping 1 variable\(s\): `mode`") FMIBuild.saveModelDescription(
+                md,
+                path,
+            )
             root = readxml(path).root
 
             @test root["fmiVersion"] == "3.0"
@@ -282,9 +297,13 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             @test !haskey(nodes["CoSimulation"], "canInterpolateInputs")
 
             variables = collect(eachelement(nodes["ModelVariables"]))
-            @test [v.name for v in variables] == ["Float64", "Float64", "Boolean"]
+            @test [v.name for v in variables] == ["Float64", "Float64", "Boolean", "Float64"]
+            @test !haskey(variables[1], "declaredType")
+            @test !haskey(variables[1], "unit")
             @test variables[2]["derivative"] == "1"
             @test variables[3]["start"] == "true"
+            @test variables[4]["causality"] == "independent"
+            @test !haskey(variables[4], "initial")
 
             unknowns = collect(eachelement(nodes["ModelStructure"]))
             @test [u.name for u in unknowns] == ["Output", "ContinuousStateDerivative"]
@@ -293,6 +312,13 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             @test unknowns[2]["valueReference"] == "2"
             @test unknowns[2]["dependencies"] == "1"
             @test unknowns[2]["dependenciesKind"] == "dependent"
+
+            # Enumeration variables can't be skipped if they are part of the interface or model structure
+            mode.causality = fmi3CausalityOutput
+            @test_throws ErrorException FMIBuild.saveModelDescription(md, path)
+            mode.causality = fmi3CausalityLocal
+            der.dependencies = UInt[1, 5]
+            @test_throws ErrorException FMIBuild.saveModelDescription(md, path)
         end
 
         @testset "Precompile statements ($(mode))" for (mode, debug) in BUILD_MODES

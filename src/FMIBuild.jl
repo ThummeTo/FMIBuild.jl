@@ -26,7 +26,11 @@ using FMIBase.FMICore:
     fmi2StringAttributesExt,
     fmi2EnumerationAttributesExt
 using FMIBase.FMICore:
-    fmi3VariableBoolean, fmi3VariableString, fmi3VariableBinary, fmi3VariableClock
+    fmi3VariableBoolean,
+    fmi3VariableString,
+    fmi3VariableBinary,
+    fmi3VariableClock,
+    fmi3VariableEnumeration
 
 import PackageCompiler
 import Pkg
@@ -1032,6 +1036,56 @@ function addFMI3FieldsAsAttributes(md::fmi3ModelDescription, node, _struct, skip
     end
 end
 
+# fields of the model structure and their element names,
+# [Note] element order is defined by the FMI 3 schema
+const FMI3_MODEL_STRUCTURE_ELEMENTS = (
+    (:outputs, "Output"),
+    (:continuousStateDerivatives, "ContinuousStateDerivative"),
+    (:clockedStates, "ClockedState"),
+    (:initialUnknowns, "InitialUnknown"),
+    (:eventIndicators, "EventIndicator"),
+)
+
+# FMI 3 `Enumeration` variables require a `declaredType`, but type definitions are not exported yet,
+# so they are skipped (e.g. the `stateSelect` constants of a Modelica model in an embedded FMU),
+# this is only possible if they are not part of the FMU interface or model structure
+function checkEnumerations(md::fmi3ModelDescription)
+    enumerations = filter(sv -> isa(sv, fmi3VariableEnumeration), md.modelVariables)
+    if length(enumerations) == 0
+        return nothing
+    end
+
+    for sv in enumerations
+        if sv.causality ∈ (fmi3CausalityInput, fmi3CausalityOutput)
+            error(
+                "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet, but `$(sv.name)` is an $(causalityToString(md, sv.causality)).",
+            )
+        end
+    end
+
+    vrs = Set(sv.valueReference for sv in enumerations)
+    for (field, _) in FMI3_MODEL_STRUCTURE_ELEMENTS
+        unknowns = getfield(md.modelStructure, field)
+        if isnothing(unknowns)
+            continue
+        end
+
+        for uk in unknowns
+            dependencies = definedField(uk, :dependencies)
+            for vr in (uk.index, something(dependencies, ())...)
+                if vr ∈ vrs
+                    error(
+                        "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet, but the Enumeration variable with value reference $(vr) is part of the model structure.",
+                    )
+                end
+            end
+        end
+    end
+
+    @warn "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet (they require type definitions), skipping $(length(enumerations)) variable(s): $(join(("`$(sv.name)`" for sv in enumerations), ", "))."
+    return nothing
+end
+
 function saveModelDescription(md::fmi3ModelDescription, file_path::String)
     doc = XMLDocument()
 
@@ -1118,9 +1172,16 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         addFMI3FieldsAsAttributes(md, de, md.defaultExperiment)
     end
 
+    checkEnumerations(md)
+
     mv = ElementNode("ModelVariables")
     link!(doc_root, mv)
     for sv in md.modelVariables
+        # see `checkEnumerations`
+        if isa(sv, fmi3VariableEnumeration)
+            continue
+        end
+
         # element name is the data type, e.g. `fmi3VariableFloat64` -> `Float64`
         sv_node = ElementNode(replace("$(nameof(typeof(sv)))", "fmi3Variable" => ""))
         link!(mv, sv_node)
@@ -1132,6 +1193,10 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         # `canHandleMultipleSetPerTimeInstant` is only allowed for inputs
         if sv.causality != fmi3CausalityInput
             push!(skiplist, :canHandleMultipleSetPerTimeInstant)
+        end
+        # `initial` is not allowed for the independent variable (FMIImport sets a default)
+        if sv.causality == fmi3CausalityIndependent
+            push!(skiplist, :initial)
         end
         # String and Binary start values are child elements
         if isa(sv, fmi3VariableString) || isa(sv, fmi3VariableBinary)
@@ -1151,14 +1216,7 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
     ms = ElementNode("ModelStructure")
     link!(doc_root, ms)
 
-    # [Note] element order is defined by the FMI 3 schema
-    for (field, name) in (
-        (:outputs, "Output"),
-        (:continuousStateDerivatives, "ContinuousStateDerivative"),
-        (:clockedStates, "ClockedState"),
-        (:initialUnknowns, "InitialUnknown"),
-        (:eventIndicators, "EventIndicator"),
-    )
+    for (field, name) in FMI3_MODEL_STRUCTURE_ELEMENTS
         unknowns = getfield(md.modelStructure, field)
         if isnothing(unknowns)
             continue
