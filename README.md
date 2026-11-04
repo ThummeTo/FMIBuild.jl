@@ -1,46 +1,46 @@
-![FMI.jl Logo](https://github.com/ThummeTo/FMI.jl/blob/main/logo/dark/fmijl_logo_640_320.png?raw=true "FMI.jl Logo")
+![FMI.jl Logo](https://github.com/JuliaFMI/FMI.jl/blob/main/logo/dark/fmijl_logo_640_320.png?raw=true "FMI.jl Logo")
 # FMIBuild.jl
 
 ## What is FMIBuild.jl?
-[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because these dependencies should not be part of the compiled FMU, they are out-sourced into this package.
-[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl).
+[*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl) holds dependencies that are required to compile and zip a Functional Mock-Up Unit (FMU) compliant to the FMI-standard ([fmi-standard.org](http://fmi-standard.org/)). Because these dependencies should not be part of the compiled FMU, they are out-sourced into this package.
+[*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl) provides the build-commands for the Julia package [*FMIExport.jl*](https://github.com/JuliaFMI/FMIExport.jl).
 
-[![Test (latest)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLatest.yml) 
-[![Test (LTS)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLTS.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/TestLTS.yml)
-[![Run PkgEval](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml/badge.svg)](https://github.com/ThummeTo/FMIBuild.jl/actions/workflows/Eval.yml)
-[![Coverage](https://codecov.io/gh/ThummeTo/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ThummeTo/FMIBuild.jl)
+[![Test (latest)](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/TestLatest.yml/badge.svg)](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/TestLatest.yml) 
+[![Test (LTS)](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/TestLTS.yml/badge.svg)](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/TestLTS.yml)
+[![Run PkgEval](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/Eval.yml/badge.svg)](https://github.com/JuliaFMI/FMIBuild.jl/actions/workflows/Eval.yml)
+[![Coverage](https://codecov.io/gh/JuliaFMI/FMIBuild.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaFMI/FMIBuild.jl)
 
 ## How can I use FMIBuild.jl?
 
-**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/ThummeTo/FMI.jl) and [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl). However, you can install *FMIBuild.jl* by following these steps.
+**Please note:** *FMIBuild.jl* is not meant to be used as it is, but as part of [*FMI.jl*](https://github.com/JuliaFMI/FMI.jl) and [*FMIExport.jl*](https://github.com/JuliaFMI/FMIExport.jl). However, you can install *FMIBuild.jl* by following these steps.
 
 1\. Open a Julia-REPL, switch to package mode using `]`, activate your preferred environment.
 
-2\. Install [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
+2\. Install [*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl):
 ```julia-repl
 (@v1.x) pkg> add FMIBuild
 ```
 
-(3)\. If you want to check that everything works correctly, you can run the tests bundled with [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl):
+(3)\. If you want to check that everything works correctly, you can run the tests bundled with [*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl):
 ```julia-repl
 (@v1.x) pkg> test FMIBuild
 ```
 
 ## What FMI.jl library should I use?
-![FMI.jl Family](https://github.com/ThummeTo/FMI.jl/blob/main/docs/src/assets/FMI_JL_family.png?raw=true  "FMI.jl Family")
+![FMI.jl Family](https://github.com/JuliaFMI/FMI.jl/blob/main/docs/src/assets/FMI_JL_family.png?raw=true  "FMI.jl Family")
 To keep dependencies nice and clean, the original package *FMI.jl* had been split into new packages:
-- [*FMI.jl*](https://github.com/ThummeTo/FMI.jl): High level loading, manipulating, saving or building entire FMUs from scratch
-- [*FMIImport.jl*](https://github.com/ThummeTo/FMIImport.jl): Importing FMUs into Julia
-- [*FMIExport.jl*](https://github.com/ThummeTo/FMIExport.jl): Exporting stand-alone FMUs from Julia Code
-- [*FMIBase.jl*](https://github.com/ThummeTo/FMIBase.jl): Common concepts for import and export of FMUs
-- [*FMICore.jl*](https://github.com/ThummeTo/FMICore.jl): C-code wrapper for the FMI-standard
-- [*FMISensitivity.jl*](https://github.com/ThummeTo/FMISensitivity.jl): Static and dynamic sensitivities over FMUs
-- [*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl): Compiler/Compilation dependencies for FMIExport.jl
-- [*FMIFlux.jl*](https://github.com/ThummeTo/FMIFlux.jl): Machine Learning with FMUs
-- [*FMIZoo.jl*](https://github.com/ThummeTo/FMIZoo.jl): A collection of testing and example FMUs
+- [*FMI.jl*](https://github.com/JuliaFMI/FMI.jl): High level loading, manipulating, saving or building entire FMUs from scratch
+- [*FMIImport.jl*](https://github.com/JuliaFMI/FMIImport.jl): Importing FMUs into Julia
+- [*FMIExport.jl*](https://github.com/JuliaFMI/FMIExport.jl): Exporting stand-alone FMUs from Julia Code
+- [*FMIBase.jl*](https://github.com/JuliaFMI/FMIBase.jl): Common concepts for import and export of FMUs
+- [*FMICore.jl*](https://github.com/JuliaFMI/FMICore.jl): C-code wrapper for the FMI-standard
+- [*FMISensitivity.jl*](https://github.com/JuliaFMI/FMISensitivity.jl): Static and dynamic sensitivities over FMUs
+- [*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl): Compiler/Compilation dependencies for FMIExport.jl
+- [*FMIFlux.jl*](https://github.com/JuliaFMI/FMIFlux.jl): Machine Learning with FMUs
+- [*FMIZoo.jl*](https://github.com/JuliaFMI/FMIZoo.jl): A collection of testing and example FMUs
 
 ## What Platforms are supported?
-[*FMIBuild.jl*](https://github.com/ThummeTo/FMIBuild.jl) is tested (and testing) under Julia Versions *1.6 LTS* and *latest* on Windows *latest* and Ubuntu *latest*. `x64` architectures are tested. Mac and x86-architectures might work, but are not tested.
+[*FMIBuild.jl*](https://github.com/JuliaFMI/FMIBuild.jl) is tested (and testing) under Julia Versions *1.6 LTS* and *latest* on Windows *latest* and Ubuntu *latest*. `x64` architectures are tested. Mac and x86-architectures might work, but are not tested.
 
 ## How to cite?
 Tobias Thummerer, Johannes Stoljar and Lars Mikelsons. 2022. **NeuralFMU: presenting a workflow for integrating hybrid NeuralODEs into real-world applications.** Electronics 11, 19, 3202. [DOI: 10.3390/electronics11193202](https://doi.org/10.3390/electronics11193202)

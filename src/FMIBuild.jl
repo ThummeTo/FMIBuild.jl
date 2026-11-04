@@ -790,7 +790,7 @@ function saveModelDescription(md::fmi2ModelDescription, file_path::String)
         doc_root,
         AttributeNode(
             "generationTool",
-            "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
+            "FMIExport.jl (https://github.com/JuliaFMI/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
         ),
     )
     if md.generationDateAndTime != nothing
@@ -1055,7 +1055,7 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         doc_root,
         AttributeNode(
             "generationTool",
-            "FMIExport.jl (https://github.com/ThummeTo/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
+            "FMIExport.jl (https://github.com/JuliaFMI/FMIExport.jl) by Tobias Thummerer, Lars Mikelsons",
         ),
     )
     generationDateAndTime = definedField(md, :generationDateAndTime)
