@@ -1046,19 +1046,58 @@ const FMI3_MODEL_STRUCTURE_ELEMENTS = (
     (:eventIndicators, "EventIndicator"),
 )
 
-# FMI 3 `Enumeration` variables require a `declaredType`, but type definitions are not exported yet,
-# so they are skipped (e.g. the `stateSelect` constants of a Modelica model in an embedded FMU),
+# element name of a type definition, e.g. `Float64Type` for `fmi3Float64Type`
+typeDefinitionName(::fmi3FloatType{T}) where {T} = "$(nameof(T))Type"
+typeDefinitionName(::fmi3IntegerType{T}) where {T} = "$(nameof(T))Type"
+typeDefinitionName(st::fmi3SimpleType) = replace("$(nameof(typeof(st)))", "fmi3" => "")
+
+# fields of a variable or type definition that reference undefined units or types,
+# they are not exported, because they would be invalid (e.g. if the model description has no definitions),
+# `units` maps the unit names to the names of their display units, `types` maps the type names to the types
+function undefinedReferences(_struct, units::Dict, types::Dict)
+    skiplist = Symbol[]
+
+    declaredType = definedField(_struct, :declaredType)
+    if !isnothing(declaredType) && !haskey(types, declaredType)
+        push!(skiplist, :declaredType)
+        declaredType = nothing
+    end
+
+    unit = definedField(_struct, :unit)
+    if !isnothing(unit) && !haskey(units, unit)
+        push!(skiplist, :unit)
+        unit = nothing
+    end
+
+    # the display unit belongs to the unit, which may be defined by the declared type
+    if isnothing(unit) && !isnothing(declaredType)
+        unit = definedField(types[declaredType], :unit)
+    end
+    displayUnit = definedField(_struct, :displayUnit)
+    if !isnothing(displayUnit) &&
+       (isnothing(unit) || displayUnit ∉ get(units, unit, String[]))
+        push!(skiplist, :displayUnit)
+    end
+
+    return skiplist
+end
+
+# FMI 3 `Enumeration` variables require a `declaredType`, so the ones without (exported) type definition
+# are skipped (e.g. if the model description has no type definitions),
 # this is only possible if they are not part of the FMU interface or model structure
-function checkEnumerations(md::fmi3ModelDescription)
-    enumerations = filter(sv -> isa(sv, fmi3VariableEnumeration), md.modelVariables)
+function skippedEnumerations(md::fmi3ModelDescription, types::Dict)
+    enumerations = filter(md.modelVariables) do sv
+        isa(sv, fmi3VariableEnumeration) &&
+            !haskey(types, something(definedField(sv, :declaredType), ""))
+    end
     if length(enumerations) == 0
-        return nothing
+        return enumerations
     end
 
     for sv in enumerations
         if sv.causality ∈ (fmi3CausalityInput, fmi3CausalityOutput)
             error(
-                "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet, but `$(sv.name)` is an $(causalityToString(md, sv.causality)).",
+                "saveModelDescription(...): The FMI3 Enumeration variable `$(sv.name)` has no type definition, but is an $(causalityToString(md, sv.causality)).",
             )
         end
     end
@@ -1075,15 +1114,57 @@ function checkEnumerations(md::fmi3ModelDescription)
             for vr in (uk.index, something(dependencies, ())...)
                 if vr ∈ vrs
                     error(
-                        "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet, but the Enumeration variable with value reference $(vr) is part of the model structure.",
+                        "saveModelDescription(...): The FMI3 Enumeration variable with value reference $(vr) has no type definition, but is part of the model structure.",
                     )
                 end
             end
         end
     end
 
-    @warn "saveModelDescription(...): Exporting FMI3 Enumeration variables is not supported yet (they require type definitions), skipping $(length(enumerations)) variable(s): $(join(("`$(sv.name)`" for sv in enumerations), ", "))."
-    return nothing
+    @warn "saveModelDescription(...): FMI3 Enumeration variables require a type definition, skipping $(length(enumerations)) variable(s) without: $(join(("`$(sv.name)`" for sv in enumerations), ", "))."
+    return enumerations
+end
+
+function saveUnitDefinitions(md::fmi3ModelDescription, doc_root, units)
+    ud = ElementNode("UnitDefinitions")
+    link!(doc_root, ud)
+
+    for unit in units
+        u_node = ElementNode("Unit")
+        link!(ud, u_node)
+        addFMI3FieldsAsAttributes(md, u_node, unit, (:baseUnit, :displayUnits))
+
+        if !isnothing(unit.baseUnit)
+            b_node = ElementNode("BaseUnit")
+            link!(u_node, b_node)
+            addFMI3FieldsAsAttributes(md, b_node, unit.baseUnit)
+        end
+
+        for displayUnit in unit.displayUnits
+            d_node = ElementNode("DisplayUnit")
+            link!(u_node, d_node)
+            addFMI3FieldsAsAttributes(md, d_node, displayUnit)
+        end
+    end
+end
+
+function saveTypeDefinitions(md::fmi3ModelDescription, doc_root, types, skiplist)
+    td = ElementNode("TypeDefinitions")
+    link!(doc_root, td)
+
+    for st in types
+        st_node = ElementNode(typeDefinitionName(st))
+        link!(td, st_node)
+        addFMI3FieldsAsAttributes(md, st_node, st, [:items, skiplist(st)...])
+
+        if isa(st, fmi3EnumerationType)
+            for item in st.items
+                i_node = ElementNode("Item")
+                link!(st_node, i_node)
+                addFMI3FieldsAsAttributes(md, i_node, item)
+            end
+        end
+    end
 end
 
 function saveModelDescription(md::fmi3ModelDescription, file_path::String)
@@ -1147,11 +1228,29 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         )
     end
 
-    for field in (:unitDefinitions, :typeDefinitions)
-        definitions = definedField(md, field)
-        if !isnothing(definitions) && length(definitions) > 0
-            @warn "saveModelDescription(...): Exporting FMI3 `$(field)` is not supported yet, they (and the references to them) are not part of the model description."
+    unitDefinitions = something(definedField(md, :unitDefinitions), fmi3Unit[])
+    typeDefinitions = something(definedField(md, :typeDefinitions), fmi3SimpleType[])
+    units = Dict(
+        unit.name => [displayUnit.name for displayUnit in unit.displayUnits] for
+        unit in unitDefinitions
+    )
+    types = Dict(st.name => st for st in typeDefinitions)
+
+    # references to undefined units or types are skipped (with a warning)
+    undefined = Set{String}()
+    skiplist = function (_struct)
+        fields = undefinedReferences(_struct, units, types)
+        for field in fields
+            push!(undefined, getfield(_struct, field))
         end
+        return fields
+    end
+
+    if length(unitDefinitions) > 0
+        saveUnitDefinitions(md, doc_root, unitDefinitions)
+    end
+    if length(typeDefinitions) > 0
+        saveTypeDefinitions(md, doc_root, typeDefinitions, skiplist)
     end
 
     logCategories = definedField(md, :logCategories)
@@ -1172,13 +1271,12 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         addFMI3FieldsAsAttributes(md, de, md.defaultExperiment)
     end
 
-    checkEnumerations(md)
+    skippedVariables = skippedEnumerations(md, types)
 
     mv = ElementNode("ModelVariables")
     link!(doc_root, mv)
     for sv in md.modelVariables
-        # see `checkEnumerations`
-        if isa(sv, fmi3VariableEnumeration)
+        if any(skipped -> skipped === sv, skippedVariables)
             continue
         end
 
@@ -1186,23 +1284,20 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         sv_node = ElementNode(replace("$(nameof(typeof(sv)))", "fmi3Variable" => ""))
         link!(mv, sv_node)
 
-        skiplist = [:annotations, :dependencies, :dependenciesKind]
-        # type and unit definitions are not exported, so references to them would be undefined
-        # (e.g. the declared types of an embedded FMU)
-        append!(skiplist, (:declaredType, :unit, :displayUnit))
+        fields = [:annotations, :dependencies, :dependenciesKind, skiplist(sv)...]
         # `canHandleMultipleSetPerTimeInstant` is only allowed for inputs
         if sv.causality != fmi3CausalityInput
-            push!(skiplist, :canHandleMultipleSetPerTimeInstant)
+            push!(fields, :canHandleMultipleSetPerTimeInstant)
         end
         # `initial` is not allowed for the independent variable (FMIImport sets a default)
         if sv.causality == fmi3CausalityIndependent
-            push!(skiplist, :initial)
+            push!(fields, :initial)
         end
         # String and Binary start values are child elements
         if isa(sv, fmi3VariableString) || isa(sv, fmi3VariableBinary)
-            push!(skiplist, :start)
+            push!(fields, :start)
         end
-        addFMI3FieldsAsAttributes(md, sv_node, sv, skiplist)
+        addFMI3FieldsAsAttributes(md, sv_node, sv, fields)
 
         if isa(sv, fmi3VariableString) && !isnothing(sv.start)
             s_node = ElementNode("Start")
@@ -1211,6 +1306,10 @@ function saveModelDescription(md::fmi3ModelDescription, file_path::String)
         elseif isa(sv, fmi3VariableBinary) && !isnothing(sv.start)
             @warn "saveModelDescription(...): Exporting start values of FMI3 Binary variables is not supported yet, skipping start value of `$(sv.name)`."
         end
+    end
+
+    if length(undefined) > 0
+        @warn "saveModelDescription(...): Skipping references to undefined units or types: $(join(("`$(name)`" for name in sort(collect(undefined))), ", "))."
     end
 
     ms = ElementNode("ModelStructure")
