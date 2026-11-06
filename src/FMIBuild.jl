@@ -151,6 +151,19 @@ function assembleBuildTemplates(
         push!(precompile_parts, (version, "precompile", "cs.jl"))
     end
 
+    # an FMI 3 FMU must export all functions, even for unsupported interface types,
+    # these return `fmi3Error` (importers like FMPy load all functions of the binary)
+    if version == "FMI3"
+        if :ME ∉ interfaces
+            push!(header_parts, (version, "c", "ME", "FMU_me.h.inc"))
+            push!(c_parts, (version, "c", "ME", "FMU_me_stubs.c.inc"))
+        end
+        if :CS ∉ interfaces
+            push!(header_parts, (version, "c", "CS", "FMU_cs.h.inc"))
+            push!(c_parts, (version, "c", "CS", "FMU_cs_stubs.c.inc"))
+        end
+    end
+
     generated_header = joinpath(build_template_dir, "FMU_init.h")
     generated_c = joinpath(build_template_dir, "FMU_init.c")
     assembleTemplateFile(generated_header, header_parts)
