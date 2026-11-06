@@ -231,8 +231,28 @@ const BUILD_MODES = ("release" => false, "debug" => true)
 
             c_code = read(templates.julia_init_c_file, String)
             @test occursin("fmi3InstantiateModelExchange", c_code)
-            @test occursin("fmi3GetContinuousStateDerivatives", c_code)
-            @test !occursin("fmi3DoStep", c_code)
+            @test occursin("jl_fmi3GetContinuousStateDerivatives(", c_code)
+            @test !occursin("jl_fmi3DoStep", c_code)
+
+            # all FMI 3 functions are exported, even for unsupported interface types (as stubs)
+            exported(fmu) = Set(
+                m.captures[1] for m in eachmatch(
+                    r"FMU_EXPORT [^(]*\b(fmi3\w+)\(",
+                    read(
+                        FMIBuild.assembleBuildTemplates(mktempdir(), "Test", fmu).julia_init_c_file,
+                        String,
+                    ),
+                )
+            )
+            exports = exported(createTestFMU3())
+            @test "fmi3DoStep" ∈ exports
+            @test "fmi3GetContinuousStateDerivatives" ∈ exports
+            @test exported(createTestFMU3(; cs = false)) == exports
+            @test exported(createTestFMU3(; me = false)) == exports
+            @test occursin(
+                r"fmi3DoStep\([^)]*\) \{ ensure_constructor\(\); return fmi3Error; \}",
+                c_code,
+            )
 
             platform, libext = FMIBuild.binaryPlatform(fmu)
             @test !isnothing(platform)
