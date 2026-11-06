@@ -258,7 +258,20 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             flag.variability = fmi3VariabilityFixed
             flag.initial = fmi3InitialExact
             flag.start = fmi3True
-            md.modelVariables = [x, dx, flag]
+            # `initial` is set by default, but not allowed for the independent variable
+            time = FMICore.fmi3VariableFloat64("time", fmi3ValueReference(4))
+            time.causality = fmi3CausalityIndependent
+            # references to undefined types and units are skipped,
+            # as well as Enumeration variables without type definition (they require a declared type)
+            x.declaredType = "Position"
+            x.unit = "m"
+            x.displayUnit = "mm"
+            mode = FMICore.fmi3VariableEnumeration("mode", fmi3ValueReference(5))
+            mode.variability = fmi3VariabilityConstant
+            mode.initial = fmi3InitialExact
+            mode.declaredType = "Mode"
+            mode.start = 1
+            md.modelVariables = [x, dx, flag, time, mode]
 
             out = fmi3VariableDependency(UInt(1))
             out.dependencies = UInt[] # depends on no known
@@ -270,7 +283,10 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             md.modelStructure.continuousStateDerivatives = [der]
 
             path = joinpath(mktempdir(), "modelDescription.xml")
-            FMIBuild.saveModelDescription(md, path)
+            @test_logs (:warn, r"skipping 1 variable\(s\) without: `mode`") (
+                :warn,
+                r"undefined units or types: `Position`, `m`, `mm`",
+            ) FMIBuild.saveModelDescription(md, path)
             root = readxml(path).root
 
             @test root["fmiVersion"] == "3.0"
@@ -280,11 +296,18 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             nodes = Dict(node.name => node for node in eachelement(root))
             @test haskey(nodes, "ModelExchange")
             @test !haskey(nodes["CoSimulation"], "canInterpolateInputs")
+            @test !haskey(nodes, "UnitDefinitions")
+            @test !haskey(nodes, "TypeDefinitions")
 
             variables = collect(eachelement(nodes["ModelVariables"]))
-            @test [v.name for v in variables] == ["Float64", "Float64", "Boolean"]
+            @test [v.name for v in variables] == ["Float64", "Float64", "Boolean", "Float64"]
+            @test !haskey(variables[1], "declaredType")
+            @test !haskey(variables[1], "unit")
+            @test !haskey(variables[1], "displayUnit")
             @test variables[2]["derivative"] == "1"
             @test variables[3]["start"] == "true"
+            @test variables[4]["causality"] == "independent"
+            @test !haskey(variables[4], "initial")
 
             unknowns = collect(eachelement(nodes["ModelStructure"]))
             @test [u.name for u in unknowns] == ["Output", "ContinuousStateDerivative"]
@@ -293,6 +316,72 @@ const BUILD_MODES = ("release" => false, "debug" => true)
             @test unknowns[2]["valueReference"] == "2"
             @test unknowns[2]["dependencies"] == "1"
             @test unknowns[2]["dependenciesKind"] == "dependent"
+
+            # Enumeration variables can't be skipped if they are part of the interface or model structure
+            mode.causality = fmi3CausalityOutput
+            @test_throws ErrorException FMIBuild.saveModelDescription(md, path)
+            mode.causality = fmi3CausalityLocal
+            der.dependencies = UInt[1, 5]
+            @test_throws ErrorException FMIBuild.saveModelDescription(md, path)
+            der.dependencies = UInt[1]
+
+            # with unit and type definitions, all references are exported
+            push!(
+                md.unitDefinitions,
+                fmi3Unit(
+                    "m",
+                    fmi3BaseUnit(; m = 1),
+                    [fmi3DisplayUnit("mm"; factor = 1000.0)],
+                ),
+            )
+            position = fmi3Float64Type("Position")
+            position.unit = "m"
+            position.min = 0.0
+            push!(md.typeDefinitions, position)
+            push!(
+                md.typeDefinitions,
+                fmi3EnumerationType(
+                    "Mode",
+                    [fmi3EnumerationItem("off", 1), fmi3EnumerationItem("on", 2, "On")],
+                ),
+            )
+            # the display unit belongs to the unit of the declared type
+            x.unit = nothing
+
+            @test_logs FMIBuild.saveModelDescription(md, path)
+            root = readxml(path).root
+
+            @test [node.name for node in eachelement(root)] == [
+                "ModelExchange",
+                "CoSimulation",
+                "UnitDefinitions",
+                "TypeDefinitions",
+                "ModelVariables",
+                "ModelStructure",
+            ]
+            nodes = Dict(node.name => node for node in eachelement(root))
+
+            unit = only(eachelement(nodes["UnitDefinitions"]))
+            @test unit["name"] == "m"
+            baseUnit, displayUnit = collect(eachelement(unit))
+            @test (baseUnit.name, baseUnit["m"], haskey(baseUnit, "s")) ==
+                  ("BaseUnit", "1", false)
+            @test (displayUnit.name, displayUnit["name"], displayUnit["factor"]) ==
+                  ("DisplayUnit", "mm", "1000.0")
+
+            types = collect(eachelement(nodes["TypeDefinitions"]))
+            @test [t.name for t in types] == ["Float64Type", "EnumerationType"]
+            @test (types[1]["name"], types[1]["unit"], types[1]["min"]) ==
+                  ("Position", "m", "0.0")
+            items = collect(eachelement(types[2]))
+            @test [(i.name, i["name"], i["value"]) for i in items] == [("Item", "off", "1"), ("Item", "on", "2")]
+            @test items[2]["description"] == "On"
+
+            variables = collect(eachelement(nodes["ModelVariables"]))
+            @test [v.name for v in variables] == ["Float64", "Float64", "Boolean", "Float64", "Enumeration"]
+            @test (variables[1]["declaredType"], variables[1]["displayUnit"]) ==
+                  ("Position", "mm")
+            @test variables[5]["declaredType"] == "Mode"
         end
 
         @testset "Precompile statements ($(mode))" for (mode, debug) in BUILD_MODES
